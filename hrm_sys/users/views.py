@@ -1,4 +1,4 @@
-from rest_framework import viewsets, generics, permissions, status
+from rest_framework import viewsets, generics, permissions, status,filters
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -9,7 +9,7 @@ from django.contrib.auth.password_validation import validate_password
 from .models import Department, SubDepartment, Role, Employee, CustomUser
 from .serializers import (
     UserSignupSerializer, UserLoginSerializer, UserDetailSerializer, UserUpdateSerializer,
-    DepartmentSerializer, SubDepartmentSerializer, RoleSerializer, EmployeeSerializer
+    DepartmentSerializer, SubDepartmentSerializer, RoleSerializer, EmployeeSerializer,EmployeeProfileSerializer
 )
 
 User = get_user_model()
@@ -120,3 +120,36 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     queryset = Employee.objects.select_related("department", "sub_department").all()
     serializer_class = EmployeeSerializer
     permission_classes = [permissions.IsAuthenticated]
+    
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = [
+        'employee_code',
+        'first_name',
+        'last_name',
+        'phone_number',
+        'department__name',
+        'sub_department__name',
+        'stations__name',
+    ]
+    ordering_fields = ['employee_code', 'first_name', 'last_name', 'phone_number']
+    ordering = ['employee_code']
+
+
+class MyProfileView(generics.RetrieveAPIView):
+    """Return the logged-in user's employee profile"""
+    serializer_class = EmployeeProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        try:
+            return Employee.objects.get(user=self.request.user)
+        except Employee.DoesNotExist:
+            return None
+
+    def get(self, request, *args, **kwargs):
+        employee = self.get_object()
+        if not employee:
+            return Response({"error": "Employee profile not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = self.get_serializer(employee, context={"request": request})
+        return Response(serializer.data)

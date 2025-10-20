@@ -1,8 +1,10 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
-import uuid
 from django.conf import settings
+from attendance.models import Station
+import uuid
+
 
 # -------------------------------
 # Custom User Model
@@ -96,8 +98,15 @@ class Employee(models.Model):
     full_name = models.CharField(max_length=255, null=True)
     phone_number = models.CharField(max_length=20,null=True)
     date_of_joining = models.DateField(null=True, blank=True)
+    
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
     sub_department = models.ForeignKey(SubDepartment, on_delete=models.SET_NULL, null=True, blank=True)
+    stations = models.ManyToManyField(
+        "attendance.Station",
+        related_name="employees",
+        blank=True
+    )
+    
     job_position = models.CharField(max_length=255, blank=True, null=True)
     employment_type = models.CharField(max_length=50, choices=[("full_time", "Full Time"), ("part_time", "Part Time"), ("contract", "Contract")])
     gender = models.CharField(max_length=10,null=True, choices=[("male", "Male"), ("female", "Female"), ("other", "Other")])
@@ -109,9 +118,19 @@ class Employee(models.Model):
     next_of_kin_name = models.CharField(max_length=255, blank=True, null=True)
     next_of_kin_relationship = models.CharField(max_length=100, blank=True, null=True)
     next_of_kin_phone = models.CharField(max_length=20, blank=True, null=True)
+    
     documents = models.FileField(upload_to="employee_docs/", blank=True, null=True)
+    profile_image = models.ImageField(
+        upload_to="employee_photos/",
+        null=True,
+        blank=True,
+        help_text="Upload employee profile picture"
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    
 
 
     def save(self, *args, **kwargs):
@@ -119,5 +138,4 @@ class Employee(models.Model):
             self.employee_code = f"EMP-{uuid.uuid4().hex[:6].upper()}"
         super().save(*args, **kwargs)
 
-    def __str__(self):
-        return f"{self.user.username} ({self.employee_code})"
+

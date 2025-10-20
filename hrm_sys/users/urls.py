@@ -22,6 +22,7 @@ router.register(r"departments", DepartmentViewSet, basename="department")
 router.register(r"subdepartments", SubDepartmentViewSet, basename="subdepartment")
 router.register(r"roles", RoleViewSet, basename="role")
 router.register(r"employees", EmployeeViewSet, basename="employee")
+router	.register(r"profile", EmployeeViewSet, basename="my-profile")
 
 # =====================================
 # URL PATTERNS

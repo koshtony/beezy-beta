@@ -171,3 +171,37 @@ class EmployeeSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
+    
+
+class EmployeeProfileSerializer(serializers.ModelSerializer):
+    department_name = serializers.CharField(source="department.name", read_only=True)
+    sub_department_name = serializers.CharField(source="sub_department.name", read_only=True)
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Employee
+        fields = [
+            "id",
+            "employee_code",
+            "full_name",
+            "phone_number",
+            "department",
+            "department_name",
+            "sub_department",
+            "sub_department_name",
+            "job_position",
+            "employment_type",
+            "gender",
+            "marital_status",
+            "job_status",
+            "date_of_joining",
+            "address",
+            "image_url",
+        ]
+
+    def get_image_url(self, obj):
+        request = self.context.get("request")
+        if obj.image and hasattr(obj.image, "url"):
+            return request.build_absolute_uri(obj.image.url)
+        return None
+

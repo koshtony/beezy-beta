@@ -29,6 +29,7 @@ DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
 
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -88,6 +89,7 @@ TEMPLATES = [
 ]
 
 
+AUTH_USER_MODEL = 'users.CustomUser'
 
 WSGI_APPLICATION = 'hrm_sys.wsgi.application'
 STATIC_URL = '/static/'

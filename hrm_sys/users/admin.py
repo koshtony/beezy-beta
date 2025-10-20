@@ -72,7 +72,7 @@ class EmployeeAdmin(admin.ModelAdmin):
                 ("employee_code", "date_of_joining"),
                 ("department", "sub_department"),
                 ("job_position", "employment_type"),
-                ("job_status",),
+                ("job_status","stations"),
             ),
         }),
         ("Next of Kin", {
@@ -82,12 +82,14 @@ class EmployeeAdmin(admin.ModelAdmin):
             ),
         }),
         ("Documents", {
-            "fields": ("documents",),
+            "fields": ("documents","profile_image"),
         }),
         ("Timestamps", {
             "fields": (("created_at", "updated_at"),),
         }),
     )
+    
+    autocomplete_fields = ("stations",)
 
     # ✅ Add this method to avoid admin.E108
     def get_full_name(self, obj):
