@@ -3,6 +3,7 @@ from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.password_validation import validate_password
 from .models import CustomUser
 from .models import Department, SubDepartment, Employee,Role
+from attendance.serializers import StationSerializer
 
 
 User = get_user_model()
@@ -177,6 +178,7 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source="department.name", read_only=True)
     sub_department_name = serializers.CharField(source="sub_department.name", read_only=True)
     image_url = serializers.SerializerMethodField()
+    stations = StationSerializer(many=True, read_only=True)
 
     class Meta:
         model = Employee
@@ -197,11 +199,12 @@ class EmployeeProfileSerializer(serializers.ModelSerializer):
             "date_of_joining",
             "address",
             "image_url",
+            "stations",
         ]
 
     def get_image_url(self, obj):
         request = self.context.get("request")
-        if obj.image and hasattr(obj.image, "url"):
-            return request.build_absolute_uri(obj.image.url)
+        if obj.profile_image and hasattr(obj.profile_image, "url"):
+            return request.build_absolute_uri(obj.profile_image.url)
         return None
 

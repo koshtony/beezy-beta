@@ -142,7 +142,7 @@ class MyProfileView(generics.RetrieveAPIView):
 
     def get_object(self):
         try:
-            return Employee.objects.get(user=self.request.user)
+            return Employee.objects.get(employee_code=self.request.user.username)
         except Employee.DoesNotExist:
             return None
 

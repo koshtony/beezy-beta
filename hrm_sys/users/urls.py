@@ -12,6 +12,7 @@ from .views import (
     SubDepartmentViewSet,
     RoleViewSet,
     EmployeeViewSet,
+    MyProfileView
 )
 
 # =====================================
@@ -22,7 +23,7 @@ router.register(r"departments", DepartmentViewSet, basename="department")
 router.register(r"subdepartments", SubDepartmentViewSet, basename="subdepartment")
 router.register(r"roles", RoleViewSet, basename="role")
 router.register(r"employees", EmployeeViewSet, basename="employee")
-router	.register(r"profile", EmployeeViewSet, basename="my-profile")
+
 
 # =====================================
 # URL PATTERNS
@@ -37,7 +38,10 @@ urlpatterns = [
     # USER MANAGEMENT
     path("me/", CurrentUserView.as_view(), name="current-user"),
     path("update/", UserUpdateView.as_view(), name="user-update"),  # current user
-    path("update/<int:pk>/", UserUpdateView.as_view(), name="user-update-admin"),  # admin editing any user
+    path("update/<int:pk>/", UserUpdateView.as_view(), name="user-update-admin"),
+    path("profile/", MyProfileView.as_view(), name="my-profile"),
+    
+    # admin editing any user
 
     # ROUTED VIEWSETS
     path("", include(router.urls)),
