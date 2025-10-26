@@ -80,45 +80,50 @@ class AttendanceClockView(views.APIView):
 
         latitude = request.data.get("latitude")
         longitude = request.data.get("longitude")
-        image = request.data.get("image")  # optional
-        ip_address = request.META.get('REMOTE_ADDR')
+        action = request.data.get("action", "check_in")
+        ip_address = request.data.get("device_ip")
+        image = request.FILES.get("image")
 
         if not latitude or not longitude:
-            return Response({"error": "Latitude and Longitude required"}, status=400)
+            return Response({"error": "Latitude and longitude required"}, status=400)
 
-        # Assume employee has at least one station
-        station = employee.stations.first()
-        if not station:
-            return Response({"error": "No station assigned"}, status=400)
+        today_record = Attendance.objects.filter(
+            employee=employee,
+            check_in_date__date=timezone.now().date()
+        ).first()
 
-        # Compute distance from station
-        distance = calculate_distance(
-            float(latitude), float(longitude),
-            float(station.latitude), float(station.longitude)
-        )
+        # ✅ Handle Check-Out
+        if action == "check_out" or (today_record and not today_record.check_out_date):
+            if not today_record:
+                return Response({"error": "No active check-in found"}, status=404)
 
-        # Within threshold (e.g. 100m)
-        threshold = 100
-        valid = distance <= threshold
+            today_record.check_out_latitude = latitude
+            today_record.check_out_longitude = longitude
+            today_record.check_out_image = image
+            today_record.check_out_date = timezone.now()
+            today_record.device_ip = ip_address
+            today_record.save()
 
-        # Save record
-        attendance = Attendance.objects.create(
+            return Response({
+                "message": "✅ Checked out successfully",
+                "early_checkout": today_record.is_early_check_out,
+                "device_changed": today_record.device_changed,
+            })
+
+        # ✅ Handle Check-In
+        attendance = Attendance(
             employee=employee,
             check_in_latitude=latitude,
             check_in_longitude=longitude,
-            distance_from_station=distance,
-            is_valid=valid,
             check_in_date=timezone.now(),
             device_ip=ip_address,
-            #image=image if image else None,
         )
-        
+        if image:
+            attendance.check_in_image = image
         attendance.save()
 
         return Response({
-            "employee": employee.full_name,
-            "station": station.name,
-            "distance": round(distance, 2),
-            "valid": valid,
-            "message": "Clocked in successfully" if valid else "Invalid clock-in (too far)",
-        }, status=200)
+            "message": "✅ Checked in successfully",
+            "late_check_in": attendance.is_late_check_in,
+            "device_changed": attendance.device_changed,
+        })
