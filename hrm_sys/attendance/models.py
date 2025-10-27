@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.apps import apps
 from math import radians, sin, cos, sqrt, atan2
 from django.contrib.auth import get_user_model
-from datetime import time
+from datetime import time,datetime
 
 
 
@@ -116,20 +116,21 @@ class Attendance(models.Model):
 
             # ✅ Time comparison (check-in lateness)
             if nearest_station and nearest_station.check_in_time and self.check_in_date:
-                current_dt = timezone.localtime(self.check_in_date)
-                station_checkin_dt = datetime.combine(
-                    current_dt.date(), nearest_station.check_in_time
-                )
-                late_threshold = station_checkin_dt + timedelta(minutes=self.LATE_THRESHOLD_MINUTES)
+                current_dt = self.check_in_date
+                late_threshold = timezone.make_aware(
+                    datetime.combine(current_dt.date(), nearest_station.check_in_time)
+                ) + timedelta(minutes=self.LATE_THRESHOLD_MINUTES)
+
                 self.is_late_check_in = current_dt > late_threshold
+
 
             # ✅ Time comparison (check-out earliness)
             if nearest_station and nearest_station.check_out_time and self.check_out_date:
-                current_dt = timezone.localtime(self.check_out_date)
-                station_checkout_dt = datetime.combine(
-                    current_dt.date(), nearest_station.check_out_time
-                )
-                early_threshold = station_checkout_dt - timedelta(minutes=self.EARLY_THRESHOLD_MINUTES)
+                current_dt = self.check_out_date
+                early_threshold = timezone.make_aware(
+                    datetime.combine(current_dt.date(), nearest_station.check_out_time)
+                ) - timedelta(minutes=self.EARLY_THRESHOLD_MINUTES)
+
                 self.is_early_check_out = current_dt < early_threshold
 
         # ✅ Device/IP comparison

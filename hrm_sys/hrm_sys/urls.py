@@ -9,7 +9,7 @@ urlpatterns = [
     
     path('attendance/', include('attendance.urls')),
     #path('leave/', include('leave.urls')),
-    #path('approvals/', include('approvals.urls')),
+    path('approvals/', include('approvals.urls')),
     #path('payroll/', include('payroll.urls')),
     
 ]
