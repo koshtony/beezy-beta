@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
+    'ckeditor',
+    'ckeditor_uploader',
     
     'users',
     'attendance',
@@ -99,6 +101,9 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # For collectstatic
 # Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+CKEDITOR_UPLOAD_PATH = 'uploads/ckeditor/'
+CKEDITOR_ALLOW_NONIMAGE_FILES = True
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases

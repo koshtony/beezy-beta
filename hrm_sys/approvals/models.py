@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from users.models import Department, SubDepartment, Role, Employee
+from ckeditor_uploader.fields import RichTextUploadingField
 from django.apps import apps
 import uuid
 
@@ -54,6 +55,7 @@ class Notification(models.Model):
 # APPROVAL RECORDS
 # --------------------------------------------
 
+
 class ApprovalRecord(models.Model):
     STATUS_CHOICES = [
         ("pending", "Pending"),
@@ -78,15 +80,15 @@ class ApprovalRecord(models.Model):
     is_proper_approver = models.BooleanField(default=True)
     was_notified = models.BooleanField(default=False)
 
+    # 🔹 New fields
+    rich_content = RichTextUploadingField(blank=True, null=True, help_text="Add detailed notes, images, or documents here.")
+    document_attachments = models.FileField(upload_to='approval_docs/', blank=True, null=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # --------------------------------------------
-    # AUTO-NOTIFICATION TRIGGERS
-    # --------------------------------------------
-
     def save(self, *args, **kwargs):
-        new_record = self._state.adding  # True if just created
+        new_record = self._state.adding
         previous_status = None
         if not new_record:
             old = ApprovalRecord.objects.get(pk=self.pk)

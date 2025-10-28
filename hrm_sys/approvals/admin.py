@@ -28,6 +28,8 @@ class NotificationInline(admin.TabularInline):
     extra = 0
     readonly_fields = ("recipient", "title", "message", "is_read", "created_at")
     can_delete = False
+    show_change_link = True
+    verbose_name_plural = "Generated Notifications"
 
 
 # ----------------------------
@@ -36,9 +38,13 @@ class NotificationInline(admin.TabularInline):
 
 @admin.register(ApprovalType)
 class ApprovalTypeAdmin(admin.ModelAdmin):
-    list_display = ("name", "description")
+    list_display = ("name", "description", "flow_count")
     search_fields = ("name",)
     inlines = [ApprovalFlowInline]
+
+    def flow_count(self, obj):
+        return obj.flows.count()
+    flow_count.short_description = "Approval Levels"
 
 
 # ----------------------------
@@ -65,6 +71,7 @@ class ApprovalFlowAdmin(admin.ModelAdmin):
         "role__name",
     )
     ordering = ("approval_type", "level")
+    autocomplete_fields = ("department", "sub_department", "role")
 
 
 # ----------------------------
@@ -82,8 +89,15 @@ class ApprovalRecordAdmin(admin.ModelAdmin):
         "colored_status",
         "created_at",
         "approved_at",
+        "has_attachment",
     )
-    list_filter = ("approval_type", "status", "is_proper_approver")
+    list_filter = (
+        "approval_type",
+        "status",
+        "is_proper_approver",
+        "was_notified",
+        "created_at",
+    )
     search_fields = (
         "creator__full_name",
         "approver__full_name",
@@ -94,9 +108,39 @@ class ApprovalRecordAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
         "approved_at",
+        "preview_rich_content",
+        "preview_attachment",
     )
     inlines = [NotificationInline]
     ordering = ("-created_at",)
+    autocomplete_fields = ("approver", "creator")
+
+    fieldsets = (
+        (None, {
+            "fields": (
+                "approval_type",
+                "creator",
+                "approver",
+                "content_type",
+                "object_id",
+                "level",
+                "status",
+                "comment",
+                "is_proper_approver",
+                "was_notified",
+            ),
+        }),
+        ("Rich Content & Attachments", {
+            "classes": ("collapse",),
+            "fields": ("rich_content", "document_attachments", "preview_rich_content", "preview_attachment"),
+        }),
+        ("Timestamps", {
+            "classes": ("collapse",),
+            "fields": ("created_at", "updated_at", "approved_at"),
+        }),
+    )
+
+    # ---- Custom Display Helpers ----
 
     def colored_status(self, obj):
         color_map = {
@@ -106,25 +150,40 @@ class ApprovalRecordAdmin(admin.ModelAdmin):
             "notified": "blue",
         }
         color = color_map.get(obj.status, "black")
-        return format_html(
-            f'<b style="color:{color}; text-transform:capitalize;">{obj.status}</b>'
-        )
-
+        return format_html(f'<b style="color:{color}; text-transform:capitalize;">{obj.status}</b>')
     colored_status.short_description = "Status"
+
+    def has_attachment(self, obj):
+        if obj.document_attachments:
+            return format_html(
+                f'<a href="{obj.document_attachments.url}" target="_blank">📎 View</a>'
+            )
+        return "—"
+    has_attachment.short_description = "Attachment"
+
+    def preview_rich_content(self, obj):
+        if obj.rich_content:
+            return format_html(f'<div style="max-width:500px;">{obj.rich_content}</div>')
+        return "—"
+    preview_rich_content.short_description = "Rich Content Preview"
+
+    def preview_attachment(self, obj):
+        if obj.document_attachments:
+            return format_html(
+                f'<a href="{obj.document_attachments.url}" target="_blank">{obj.document_attachments.name}</a>'
+            )
+        return "—"
+    preview_attachment.short_description = "File Attachment"
 
     def save_model(self, request, obj, form, change):
         """
-        Auto-handle notification triggers and save logic already in model.
+        Auto-handle notification triggers (logic already in model.save()).
         """
         super().save_model(request, obj, form, change)
         if not change:
-            print(
-                f"🔔 New ApprovalRecord created: {obj.approval_type.name} by {obj.creator.full_name}"
-            )
+            self.message_user(request, f"New approval record created: {obj.approval_type.name}")
         else:
-            print(
-                f"🔔 ApprovalRecord #{obj.id} updated — current status: {obj.status.upper()}"
-            )
+            self.message_user(request, f"Approval record #{obj.id} updated (status: {obj.status})")
 
 
 # ----------------------------
@@ -140,16 +199,21 @@ class NotificationAdmin(admin.ModelAdmin):
         "created_at",
         "related_record_display",
     )
-    list_filter = ("is_read", "created_at")
+    list_filter = ("is_read", "created_at", "recipient")
     search_fields = ("recipient__full_name", "title", "message")
-    readonly_fields = ("created_at",)
+    readonly_fields = ("created_at", "related_record_link")
     ordering = ("-created_at",)
 
     def related_record_display(self, obj):
         if obj.related_record:
             return format_html(
-                f'<a href="/admin/{obj.related_record._meta.app_label}/{obj.related_record._meta.model_name}/{obj.related_record.id}/change/">{obj.related_record}</a>'
+                f'<a href="/admin/{obj.related_record._meta.app_label}/'
+                f'{obj.related_record._meta.model_name}/{obj.related_record.id}/change/">'
+                f'{obj.related_record}</a>'
             )
         return "—"
-
     related_record_display.short_description = "Related Approval"
+
+    def related_record_link(self, obj):
+        return self.related_record_display(obj)
+    related_record_link.short_description = "Linked Approval Record"

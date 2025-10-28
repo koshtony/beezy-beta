@@ -12,6 +12,8 @@ urlpatterns = [
     path('approvals/', include('approvals.urls')),
     #path('payroll/', include('payroll.urls')),
     
+    path('ckeditor/', include('ckeditor_uploader.urls')),
+    
 ]
 
 if settings.DEBUG:
