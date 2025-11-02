@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import CustomUser, Department, SubDepartment, Role, Employee
+from leave.models import LeaveBalance
 
 
 # ==============================
@@ -37,6 +38,21 @@ class CustomUserAdmin(UserAdmin):
         }),
     )
 
+class LeaveBalanceInline(admin.TabularInline):
+    model = LeaveBalance
+    extra = 1
+    fields = ('leave_type', 'year','allocated_days', 'used_days', 'remaining_days')
+    autocomplete_fields = ('leave_type',)
+    verbose_name = "Leave Allocation"
+    verbose_name_plural = "Leave Allocations"
+
+
+# --- Extend Employee Admin ---
+# Unregister the existing Employee admin if it's already registered
+try:
+    admin.site.unregister(Employee)
+except admin.sites.NotRegistered:
+    pass
 # ==============================
 # Employee Admin
 # ==============================
@@ -90,6 +106,8 @@ class EmployeeAdmin(admin.ModelAdmin):
     )
     
     autocomplete_fields = ("stations",)
+    
+    inlines = [LeaveBalanceInline]
 
     # ✅ Add this method to avoid admin.E108
     def get_full_name(self, obj):

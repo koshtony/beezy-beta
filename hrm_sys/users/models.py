@@ -115,6 +115,10 @@ class Employee(models.Model):
     national_id = models.CharField(max_length=20, blank=True, null=True)
     date_of_birth = models.DateField(null=True, blank=True)
     address = models.TextField(blank=True, null=True)
+    
+    bank_account_number = models.CharField(max_length=30, blank=True, null=True)
+    bank_name = models.CharField(max_length=100, blank=True, null=True)
+    
     next_of_kin_name = models.CharField(max_length=255, blank=True, null=True)
     next_of_kin_relationship = models.CharField(max_length=100, blank=True, null=True)
     next_of_kin_phone = models.CharField(max_length=20, blank=True, null=True)
