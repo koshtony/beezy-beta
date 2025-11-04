@@ -34,6 +34,7 @@ class LeaveRequestAdmin(admin.ModelAdmin):
         "days_requested",
         "status",
         "created_at",
+        "approver",
     )
     list_filter = ("status", "leave_type", "start_date")
     search_fields = (

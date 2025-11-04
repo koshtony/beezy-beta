@@ -45,13 +45,22 @@ class LoginView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
 
-        # Create JWT tokens
+        # ✅ Try to find an employee whose employee_code matches username
+        employee = Employee.objects.filter(employee_code=user.username).first()
+
         refresh = RefreshToken.for_user(user)
 
+        # ✅ Build a clean response payload
         return Response({
             "refresh": str(refresh),
             "access": str(refresh.access_token),
-            "user": UserDetailSerializer(user).data,
+            "user": {
+                "id": employee.id if employee else None,        # <-- this is what Flutter needs
+                "employee_code": employee.employee_code if employee else user.username,
+                "first_name": getattr(employee, "first_name", user.first_name),
+                "last_name": getattr(employee, "last_name", user.last_name),
+                "email": user.email,
+            },
         }, status=status.HTTP_200_OK)
 
 

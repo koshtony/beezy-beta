@@ -52,11 +52,15 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         return LeaveRequest.objects.filter(employee=employee).order_by("-created_at")
 
     def perform_create(self, serializer):
-        user = self.request.user
-        employee = Employee.objects.filter(employee_code=user.username).first()
+        employee = serializer.validated_data.get("employee")
         if not employee:
-            raise serializers.ValidationError("Employee profile not found for this user.")
-        serializer.save(employee=employee)
+            raise serializers.ValidationError({"employee": "Employee is required"})
+
+    
+        if not Employee.objects.filter(id=employee.id).exists():
+            raise serializers.ValidationError({"employee": "Invalid employee ID"})
+
+        serializer.save()
 
     # ✅ View approval progress
     @action(detail=True, methods=["get"])
@@ -118,7 +122,9 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
         if not employee:
             return Response({"detail": "Employee profile not found."}, status=status.HTTP_400_BAD_REQUEST)
 
-        leaves = LeaveRequest.objects.filter(employee=employee).order_by("-created_at")
+        leaves = LeaveRequest.objects.filter(
+            employee=employee
+            ).order_by("-created_at")
         serializer = self.get_serializer(leaves, many=True)
         return Response(serializer.data)
 
@@ -132,11 +138,11 @@ class LeaveRequestViewSet(viewsets.ModelViewSet):
 
         pending = LeaveRequest.objects.filter(
             status="pending",
-            department=employee.department,
-            sub_department=employee.sub_department,
+            approver = employee
         ).select_related("employee", "leave_type")
 
         serializer = self.get_serializer(pending, many=True)
+        print(serializer.data)
         return Response(serializer.data)
 
 
