@@ -1,12 +1,10 @@
+from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import (
-    LeaveTypeViewSet, LeaveRequestViewSet, LeaveBalanceViewSet, LeaveApproverViewSet
-)
+from .views import LeaveRequestViewSet
 
 router = DefaultRouter()
-router.register(r'leave/types', LeaveTypeViewSet)
-router.register(r'leave/requests', LeaveRequestViewSet)
-router.register(r'leave/balances', LeaveBalanceViewSet)
-router.register(r'leave/approvers', LeaveApproverViewSet)
+router.register(r'requests', LeaveRequestViewSet, basename='leave-requests')
 
-urlpatterns = router.urls
+urlpatterns = [
+    path('leave/', include(router.urls)),  # ✅ matches Flutter baseUrl: /leave/leave/
+]
