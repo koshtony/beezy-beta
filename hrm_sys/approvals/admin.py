@@ -56,6 +56,7 @@ class ApprovalFlowAdmin(admin.ModelAdmin):
     list_display = (
         "approval_type",
         "level",
+        "approver",
         "department",
         "sub_department",
         "role",
@@ -71,7 +72,7 @@ class ApprovalFlowAdmin(admin.ModelAdmin):
         "role__name",
     )
     ordering = ("approval_type", "level")
-    autocomplete_fields = ("department", "sub_department", "role")
+    autocomplete_fields = ("approver","department", "sub_department", "role")
 
 
 # ----------------------------

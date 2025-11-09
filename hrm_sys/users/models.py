@@ -135,7 +135,7 @@ class Employee(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     
-
+    def __str__(self): return F"{self.employee_code} - {self.full_name} - {self.job_position}" 
 
     def save(self, *args, **kwargs):
         if not self.employee_code:

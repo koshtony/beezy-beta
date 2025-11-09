@@ -1,10 +1,5 @@
 from rest_framework import serializers
-from .models import (
-    ApprovalType,
-    ApprovalFlow,
-    ApprovalRecord,
-    Notification,
-)
+from .models import ApprovalType, ApprovalFlow, ApprovalRecord, Notification
 from users.models import Employee
 
 
@@ -31,6 +26,7 @@ class ApprovalTypeSerializer(serializers.ModelSerializer):
 # --------------------------------------------
 class ApprovalFlowSerializer(serializers.ModelSerializer):
     approval_type = ApprovalTypeSerializer(read_only=True)
+    approver = EmployeeMiniSerializer(read_only=True)
     department_name = serializers.CharField(source="department.name", read_only=True)
     sub_department_name = serializers.CharField(source="sub_department.name", read_only=True)
     role_name = serializers.CharField(source="role.name", read_only=True)
@@ -40,10 +36,11 @@ class ApprovalFlowSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "approval_type",
+            "level",
+            "approver",
             "department_name",
             "sub_department_name",
             "role_name",
-            "level",
             "is_proper_approver",
             "notify_approver",
             "is_active",
@@ -98,11 +95,6 @@ class ApprovalRecordSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.document_attachments.url)
         return None
 
-    def create(self, validated_data):
-        """Custom create for file uploads"""
-        record = super().create(validated_data)
-        return record
-
 
 # --------------------------------------------
 # NOTIFICATION
@@ -149,4 +141,5 @@ class NotificationSerializer(serializers.ModelSerializer):
             "status": rec.status,
             "creator": rec.creator.full_name,
             "approver": rec.approver.full_name,
+            "level": rec.level,
         }
