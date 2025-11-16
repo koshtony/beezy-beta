@@ -1,0 +1,14 @@
+<div class="mb-4">
+  <input
+    type="text"
+    name="search"
+    placeholder="Search approvals…"
+    value="{{ search_query }}"
+    hx-get="{% url 'my-created-approvals' %}"
+    hx-target="#approvals-list"
+    hx-trigger="keyup changed delay:400ms"
+    hx-indicator="#spinner"
+    class="w-full px-4 py-2 rounded-lg border border-gray-300
+           focus:ring-2 focus:ring-blue-400 focus:outline-none"
+  />
+</div>

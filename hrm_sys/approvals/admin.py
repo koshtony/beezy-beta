@@ -90,7 +90,7 @@ class ApprovalRecordAdmin(admin.ModelAdmin):
         "colored_status",
         "created_at",
         "approved_at",
-        "has_attachment",
+        
     )
     list_filter = (
         "approval_type",
@@ -110,7 +110,7 @@ class ApprovalRecordAdmin(admin.ModelAdmin):
         "updated_at",
         "approved_at",
         "preview_rich_content",
-        "preview_attachment",
+
     )
     inlines = [NotificationInline]
     ordering = ("-created_at",)
@@ -133,7 +133,7 @@ class ApprovalRecordAdmin(admin.ModelAdmin):
         }),
         ("Rich Content & Attachments", {
             "classes": ("collapse",),
-            "fields": ("rich_content", "document_attachments", "preview_rich_content", "preview_attachment"),
+            "fields": ("rich_content",  "preview_rich_content"),
         }),
         ("Timestamps", {
             "classes": ("collapse",),
@@ -154,13 +154,7 @@ class ApprovalRecordAdmin(admin.ModelAdmin):
         return format_html(f'<b style="color:{color}; text-transform:capitalize;">{obj.status}</b>')
     colored_status.short_description = "Status"
 
-    def has_attachment(self, obj):
-        if obj.document_attachments:
-            return format_html(
-                f'<a href="{obj.document_attachments.url}" target="_blank">📎 View</a>'
-            )
-        return "—"
-    has_attachment.short_description = "Attachment"
+   
 
     def preview_rich_content(self, obj):
         if obj.rich_content:
@@ -168,13 +162,7 @@ class ApprovalRecordAdmin(admin.ModelAdmin):
         return "—"
     preview_rich_content.short_description = "Rich Content Preview"
 
-    def preview_attachment(self, obj):
-        if obj.document_attachments:
-            return format_html(
-                f'<a href="{obj.document_attachments.url}" target="_blank">{obj.document_attachments.name}</a>'
-            )
-        return "—"
-    preview_attachment.short_description = "File Attachment"
+ 
 
     def save_model(self, request, obj, form, change):
         """

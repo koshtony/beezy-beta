@@ -1,0 +1,106 @@
+{% comment %}
+  approvals_tab_links.html
+  - Reusable tab navigation for approvals pages
+  - Uses hx-boost links with modern icons
+  - Highlights current page
+  - Shows loading spinner on click
+{% endcomment %}
+
+<div class="mb-6 border-b border-gray-200 relative">
+  <nav class="flex space-x-4" aria-label="Tabs">
+    <!-- Spinner (hidden by default) -->
+    <div id="tab-spinner" class="absolute right-0 top-0 mt-2 mr-2 hidden">
+      <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+      </svg>
+    </div>
+
+    <!-- New Approval Request -->
+    <a 
+       href="{% url 'create-approval' %}" 
+       hx-boost="true"
+       class="tab-link flex items-center gap-2 px-3 py-2 text-sm font-medium focus:outline-none">
+       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+       </svg>
+       New Approval
+    </a>
+
+    <!-- My Pending Approvals -->
+    <a 
+       href="{% url 'my-pending-approvals' %}" 
+       hx-boost="true"
+       class="tab-link flex items-center gap-2 px-3 py-2 text-sm font-medium focus:outline-none">
+       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+       </svg>
+       To Approve
+    </a>
+     <a 
+       href="{% url 'my-created-approvals' %}" 
+       hx-boost="true"
+       class="tab-link flex items-center gap-2 px-3 py-2 text-sm font-medium focus:outline-none">
+       <svg xmlns="http://www.w3.org/2000/svg" 
+     viewBox="0 0 24 24" 
+     fill="none" 
+     stroke="currentColor" 
+     stroke-width="1.8" 
+     stroke-linecap="round" 
+     stroke-linejoin="round"
+     class="h-5 w-5">
+  <!-- Clipboard shape -->
+  <rect x="4" y="5" width="16" height="16" rx="3" ry="3"></rect>
+  <path d="M9 3h6a2 2 0 012 2v1H7V5a2 2 0 012-2z"></path>
+
+  <!-- Checkmark -->
+  <path d="M9 14l2 2 4-4"></path>
+</svg>
+
+       Created 
+    </a>
+  </nav>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const tabLinks = document.querySelectorAll('.tab-link');
+    const spinner = document.getElementById('tab-spinner');
+
+    function highlightActiveTab() {
+        const currentPath = window.location.pathname;
+        tabLinks.forEach(link => {
+            link.classList.remove('text-blue-600', 'border-blue-600');
+            link.classList.add('text-gray-500');
+
+            const linkPath = new URL(link.href).pathname;
+            if (linkPath === currentPath) {
+                link.classList.add('text-blue-600', 'border-blue-600');
+                link.classList.remove('text-gray-500');
+            }
+        });
+    }
+
+    highlightActiveTab();
+
+    tabLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            tabLinks.forEach(l => {
+                l.classList.remove('text-blue-600', 'border-blue-600');
+                l.classList.add('text-gray-500');
+            });
+            link.classList.add('text-blue-600', 'border-blue-600');
+            link.classList.remove('text-gray-500');
+
+            // Show spinner
+            spinner.classList.remove('hidden');
+        });
+    });
+
+    // Hide spinner after HTMX content load
+    document.body.addEventListener('htmx:afterSwap', () => {
+        spinner.classList.add('hidden');
+        highlightActiveTab();
+    });
+});
+</script>

@@ -12,7 +12,7 @@ urlpatterns = [
     path('approvals/', include('approvals.urls')),
     #path('payroll/', include('payroll.urls')),
     
-    path('ckeditor/', include('ckeditor_uploader.urls')),
+   path('tinymce/', include('tinymce.urls')),
     
 ]
 

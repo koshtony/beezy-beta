@@ -1,0 +1,28 @@
+<!-- approvals/partials/approval_step.html -->
+<div class="step border rounded p-4 relative">
+  <div class="flex justify-between items-center mb-2">
+    <h3 class="font-semibold">Step {{ step_index }}</h3>
+    {% if step_index > 1 %}
+      <button type="button" class="text-red-500" onclick="this.closest('.step').remove()">Remove Step</button>
+    {% endif %}
+  </div>
+
+  <div class="mb-2">
+    <label class="block font-medium mb-1">Approvers</label>
+    <select name="approvers_level_{{ step_index }}[]" id="approvers_{{ step_index }}" multiple class="w-full border rounded px-3 py-2">
+      {% for emp in employees %}
+        <option value="{{ emp.id }}">{{ emp.full_name }} ({{ emp.employee_code }})</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="mb-2">
+    <label class="block font-medium mb-1">Content</label>
+    <textarea name="rich_content_{{ step_index }}" class="tinymce w-full border rounded px-3 py-2" rows="4"></textarea>
+  </div>
+
+  <div class="mb-2">
+    <label class="block font-medium mb-1">Attachments</label>
+    <input type="file" name="attachments_{{ step_index }}" multiple class="w-full">
+  </div>
+</div>

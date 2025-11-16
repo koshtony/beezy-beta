@@ -1,0 +1,194 @@
+{% extends "configs/base.html" %}
+{% load static %}
+
+{% block content %}
+{% include 'configs/partials/sidebar.html' %}
+
+<main class="ease-soft-in-out xl:ml-68.5 relative h-full max-h-screen rounded-xl transition-all duration-200 p-4 sm:p-6">
+
+  {% include 'configs/partials/main-top-nav.html' %}
+
+  <div class="bg-white rounded-xl shadow p-6 sm:p-8 max-w-6xl mx-auto mt-6">
+
+    {% include 'approvals/partials/approval_tabs.html' %}
+    <h6 class="text-2xl sm:text-3xl font-semibold mb-6 text-gray-800">New Approval Request</h6>
+
+    <form method="POST" enctype="multipart/form-data" id="approval-form"
+          hx-post="{% url 'create-approval' %}"
+          hx-target="#form-messages"
+          hx-swap="innerHTML">
+      {% csrf_token %}
+      <div id="form-messages"></div>
+
+      <!-- ---------- APPROVAL TYPE ---------- -->
+      <div class="mb-5">
+        <label class="block mb-2 font-medium text-gray-800">Approval Type</label>
+        <select name="approval_type"
+                id="approval-type-select"
+                class="approval-type-select w-full rounded-lg"
+                hx-get="{% url 'load-approvers' %}"
+                hx-target="#approvers-chips"
+                hx-trigger="change">
+          <option value="">Select Approval Type</option>
+          {% for at in form.fields.approval_type.queryset %}
+          <option value="{{ at.id }}">{{ at.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- ---------- APPROVER CHIPS ---------- -->
+      <div class="mb-5">
+        <label class="block mb-2 font-medium text-gray-800">Approvers</label>
+        <div id="approvers-chips"
+             class="flex flex-wrap gap-2 p-3 border rounded-lg min-h-[56px] bg-gray-50 cursor-text"
+             onclick="document.getElementById('approvers-input').focus();">
+        </div>
+        <input type="text" id="approvers-input" class="hidden" autocomplete="off">
+      </div>
+
+      <!-- ---------- RICH CONTENT ---------- -->
+      <div class="mb-5">
+        {{ form.rich_content.label_tag }}
+        {{ form.rich_content }}
+        {{ form.media }}
+        {{ form.rich_content.errors }}
+      </div>
+
+      <!-- ---------- DRAG & DROP ---------- -->
+      <div class="mb-5">
+        <label class="block mb-2 font-medium text-gray-800">Attachments</label>
+        <div id="dropzone"
+             class="border-2 border-dashed border-gray-400 rounded-xl p-6 text-center cursor-pointer transition hover:bg-gray-100">
+          <p class="text-gray-500 text-sm sm:text-base">Drag & drop files here or click to upload</p>
+          <input type="file" name="attachments" id="file-input" multiple class="hidden">
+        </div>
+        <div id="file-preview" class="mt-3 space-y-2"></div>
+      </div>
+
+      <!-- ---------- SUBMIT ---------- -->
+      <div class="mt-7 flex justify-end">
+        <button type="submit"
+                class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+          Submit Approval
+        </button>
+      </div>
+    </form>
+
+  </div>
+</main>
+
+<!-- ---------- CHOICES.JS ---------- -->
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+<script>
+/* JS REMAINS UNCHANGED — Only layout was improved */
+document.addEventListener('DOMContentLoaded', function() {
+
+    new Choices('#approval-type-select', {
+        searchEnabled: true,
+        shouldSort: false
+    });
+
+    const chipsContainer = document.getElementById('approvers-chips');
+    const input = document.getElementById('approvers-input');
+    let selectedApprovers = [];
+
+    function renderChips() {
+        chipsContainer.innerHTML = '';
+        selectedApprovers.forEach((appr, index) => {
+            const chip = document.createElement('div');
+            chip.className =
+                'flex items-center bg-green-100 text-green-900 px-3 py-1 rounded-full shadow-sm space-x-2';
+            chip.innerHTML = `
+                <span class="font-medium">${appr.name}</span>
+                <button type="button" class="text-red-500 font-bold" onclick="removeApprover(${index})">&times;</button>
+            `;
+            chipsContainer.appendChild(chip);
+        });
+    }
+
+    window.removeApprover = function(index) {
+        selectedApprovers.splice(index, 1);
+        renderChips();
+    }
+
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target.id === "approvers-chips") {
+            selectedApprovers = [];
+            evt.detail.target.querySelectorAll('option').forEach(opt => {
+                selectedApprovers.push({ id: opt.value, name: opt.text });
+            });
+            renderChips();
+        }
+    });
+
+    /* FILE UPLOADS */
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('file-input');
+    const filePreview = document.getElementById('file-preview');
+    let filesList = [];
+
+    function addFiles(newFiles) {
+        for (const file of newFiles) {
+            if (!filesList.some(f => f.name === file.name && f.size === file.size)) {
+                filesList.push(file);
+            }
+        }
+        updatePreview();
+    }
+
+    function updatePreview() {
+        filePreview.innerHTML = '';
+        filesList.forEach((file, index) => {
+            const div = document.createElement('div');
+            div.className =
+                'flex items-center justify-between p-2 border rounded-lg bg-gray-50 shadow-sm';
+            div.innerHTML = `
+                <span class="truncate">${file.name}</span>
+                <button type="button" class="text-red-600 text-sm" onclick="removeFile(${index})">Remove</button>
+            `;
+            filePreview.appendChild(div);
+        });
+    }
+
+    function removeFile(index) {
+        filesList.splice(index, 1);
+        updatePreview();
+    }
+
+    dropzone.onclick = () => fileInput.click();
+    dropzone.ondragover = e => { e.preventDefault(); dropzone.classList.add('bg-gray-100'); };
+    dropzone.ondragleave = () => dropzone.classList.remove('bg-gray-100');
+    dropzone.ondrop = e => { 
+        e.preventDefault(); 
+        dropzone.classList.remove('bg-gray-100'); 
+        addFiles(e.dataTransfer.files); 
+    };
+
+    fileInput.onchange = e => {
+        addFiles(e.target.files);
+        e.target.value = '';
+    };
+
+    /* FORM SUBMIT */
+    document.getElementById('approval-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+
+        selectedApprovers.forEach(appr => formData.append('approvers', appr.id));
+        filesList.forEach(file => formData.append('attachments', file));
+
+        fetch(this.action, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: formData
+        })
+        .then(response => response.text())
+        .then(html => document.getElementById('form-messages').innerHTML = html);
+    });
+});
+</script>
+
+{% endblock %}

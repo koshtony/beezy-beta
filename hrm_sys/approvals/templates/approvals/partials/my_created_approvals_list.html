@@ -1,0 +1,128 @@
+{% if items %}
+<div class="space-y-6">
+
+  {% for item in items|slice:":5" %}
+  <div class="border rounded-xl p-5 shadow-sm bg-white">
+
+    <!-- Top Row -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+      <div>
+        <p class="text-lg font-semibold text-gray-800">
+          {{ item.approval.approval_type.name }}
+        </p>
+        <p class="text-sm text-gray-500">
+          Created: {{ item.approval.created_at|date:"M d, Y H:i" }}
+        </p>
+      </div>
+
+      <!-- Status badge -->
+      <span class="flex items-center gap-1 text-xs px-3 py-1 rounded-full mt-2 sm:mt-0
+        {% if item.approval.status == 'approved' %} bg-green-100 text-green-700
+        {% elif item.approval.status == 'pending' %} bg-orange-100 text-orange-700
+        {% else %} bg-gray-200 text-gray-700 {% endif %}">
+        {% if item.approval.status == 'approved' %}
+          <svg class="h-4 w-4" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M5 13l4 4L19 7" />
+          </svg>
+        {% elif item.approval.status == 'pending' %}
+          <svg class="h-4 w-4" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 8v4m0 4h.01" />
+          </svg>
+        {% else %}
+          <svg class="h-4 w-4" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        {% endif %}
+        {{ item.approval.status|title }}
+      </span>
+    </div>
+
+    <!-- Last Approval Date -->
+    {% if item.last_approval_date %}
+    <p class="text-sm text-green-600 mb-3">
+      Last approved: {{ item.last_approval_date|date:"M d, Y H:i" }}
+    </p>
+    {% endif %}
+
+    <!-- Collapsible Timeline -->
+    <div x-data="{ open: false }" class="mt-3">
+
+      <button @click="open = !open"
+              class="flex items-center gap-2 text-blue-600 hover:underline mb-2">
+        <svg x-show="!open" class="h-5 w-5" fill="none" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 5v14m7-7H5" />
+        </svg>
+        <svg x-show="open" class="h-5 w-5" fill="none" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 12H5" />
+        </svg>
+        Show Timeline
+      </button>
+
+      <div x-show="open" x-collapse class="mt-2">
+
+        <div class="flow-root">
+          <ul class="relative border-l border-gray-200 dark:border-gray-700">
+
+            {% for s in item.stages %}
+            <li class="mb-10 ml-6 relative">
+
+              <!-- Dot -->
+              <span class="absolute -left-3.5 flex items-center justify-center w-7 h-7 rounded-full ring-4
+                {% if s.status == 'approved' %} bg-green-500 ring-green-200
+                {% elif s.status == 'pending' %} bg-orange-500 ring-orange-200
+                {% else %} bg-gray-400 ring-gray-200 {% endif %}">
+              </span>
+
+              <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center">
+                <!-- Approver Info -->
+                <div>
+                  <p class="font-medium text-gray-800">
+                    {% if s.flow.approver %}
+                      {{ s.flow.approver.full_name }}
+                    {% else %}
+                      Approver not assigned
+                    {% endif %}
+                  </p>
+
+                  {% if s.status == 'approved' %}
+                    <p class="text-sm text-green-600">
+                      
+                    </p>
+                  {% elif s.status == 'pending' %}
+                    <p class="text-sm text-orange-600">Pending</p>
+                  {% else %}
+                    <p class="text-sm text-gray-400">Upcoming</p>
+                  {% endif %}
+                </div>
+
+                <!-- Status badge small -->
+                <span class="mt-1 sm:mt-0 text-xs px-1 py-0.2 rounded-full
+                  {% if s.status == 'approved' %} bg-green-100 text-green-700
+                  {% elif s.status == 'pending' %} bg-orange-100 text-orange-700
+                  {% else %} bg-gray-200 text-gray-700 {% endif %}">
+                  &nbsp; &nbsp;{{ s.status|title }} Last Approved at: {{ s.approved_at}}
+                </span>
+              </div>
+
+            </li>
+            {% endfor %}
+
+          </ul>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+  {% endfor %}
+
+</div>
+{% else %}
+<p class="text-gray-500 text-center py-6">No approvals found.</p>
+{% endif %}

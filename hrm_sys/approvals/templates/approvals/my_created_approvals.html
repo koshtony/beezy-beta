@@ -1,0 +1,79 @@
+{% extends "configs/base.html" %}
+{% load static %}
+
+{% block content %}
+{% include 'configs/partials/sidebar.html' %}
+
+<main class="ease-soft-in-out xl:ml-68.5 p-4 sm:p-6">
+
+  {% include 'configs/partials/main-top-nav.html' %}
+
+  <div class="bg-white rounded-xl shadow p-6 sm:p-8 max-w-6xl w-full mx-auto">
+
+    {% include 'approvals/partials/approval_tabs.html' %}
+
+    <h6 class="text-2xl sm:text-3xl font-semibold mb-6 text-gray-800">My Created Approvals</h6>
+
+    <!-- Spinner -->
+    <div id="spinner" class="htmx-indicator hidden text-center py-2">
+      <svg class="animate-spin h-6 w-6 text-blue-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" stroke-width="4" class="opacity-25" />
+        <path class="opacity-75" stroke-width="4" d="M4 12a8 8 0 018-8" />
+      </svg>
+    </div>
+
+    <!-- FILTER BUTTONS -->
+    <div class="flex flex-wrap gap-2 mb-4">
+      <button
+        hx-get="{% url 'search-my-created-approvals' %}?filter=all"
+        hx-target="#approvals-list"
+        hx-indicator="#spinner"
+        class="filter-btn px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300">
+        All
+      </button>
+
+      <button
+        hx-get="{% url 'search-my-created-approvals' %}?filter=pending"
+        hx-target="#approvals-list"
+        hx-indicator="#spinner"
+        class="filter-btn px-4 py-2 rounded-lg bg-orange-100 text-orange-700 hover:bg-orange-200">
+        Pending
+      </button>
+
+      <button
+        hx-get="{% url 'search-my-created-approvals' %}?filter=approved"
+        hx-target="#approvals-list"
+        hx-indicator="#spinner"
+        class="filter-btn px-4 py-2 rounded-lg bg-green-100 text-green-700 hover:bg-green-200">
+        Approved
+      </button>
+    </div>
+
+    <!-- SEARCH BAR -->
+    <div class="mb-4">
+      <form id="search-form" hx-get="{% url 'search-my-created-approvals' %}" hx-target="#approvals-list" hx-indicator="#spinner" class="flex flex-col sm:flex-row gap-2">
+        <input
+          type="text"
+          name="search"
+          placeholder="Search approvals..."
+          class="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+          Search
+        </button>
+      </form>
+    </div>
+
+    <!-- APPROVAL LIST -->
+    <div id="approvals-list">
+        yes
+      {% include "approvals/partials/my_created_approvals_list.html" %}
+    </div>
+
+  </div>
+</main>
+
+<script src="https://unpkg.com/htmx.org@1.9.3/dist/htmx.min.js"></script>
+<script src="https://unpkg.com/alpinejs" defer></script>
+
+{% endblock %}

@@ -6,8 +6,8 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from django.contrib.contenttypes.models import ContentType
 
-from .models import ApprovalRecord, ApprovalFlow, Notification
-from .serializers import ApprovalRecordSerializer, NotificationSerializer
+from approvals.models import ApprovalRecord, ApprovalFlow, Notification
+from  approvals.serializers import ApprovalRecordSerializer, NotificationSerializer
 from users.models import Employee
 
 

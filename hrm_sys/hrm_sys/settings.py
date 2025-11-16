@@ -43,14 +43,15 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
-    'ckeditor',
-    'ckeditor_uploader',
+    'tinymce',
+
     
     'users',
     'attendance',
     'leave',
     'approvals',
     'payroll',
+    'configs',
 ]
 
 MIDDLEWARE = [
@@ -94,9 +95,9 @@ TEMPLATES = [
 AUTH_USER_MODEL = 'users.CustomUser'
 
 WSGI_APPLICATION = 'hrm_sys.wsgi.application'
-STATIC_URL = '/static/'
+STATIC_URL = 'static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # For collectstatic
+STATIC_ROOT = os.path.join(BASE_DIR, 'configs/static')  # For collectstatic
 
 # Media files
 MEDIA_URL = '/media/'

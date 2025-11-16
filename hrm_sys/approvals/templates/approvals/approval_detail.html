@@ -1,0 +1,100 @@
+{% extends "configs/base.html" %}
+{% load static %}
+
+{% block content %}
+{% include 'configs/partials/sidebar.html' %}
+
+<main class="ease-soft-in-out xl:ml-68.5 relative h-full max-h-screen rounded-xl transition-all duration-200 p-6">
+  {% include 'configs/partials/main-top-nav.html' %}
+
+  <div class="max-w-5xl mx-auto space-y-6">
+
+    <!-- Approval Header & Actions -->
+    <div class="bg-white shadow-md rounded-xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between space-y-4 md:space-y-0">
+      <div>
+        <h2 class="text-2xl font-bold text-gray-800">{{ approval.approval_type.name }}</h2>
+        <p class="text-gray-500 mt-1">
+          Submitted by {{ approval.creator.full_name }} 
+          ({{ approval.creator.department.name }} / {{ approval.creator.sub_department.name }})
+        </p>
+      </div>
+
+      {% if approval.status == 'pending' and approval.approver.employee_code == request.user.username %}
+      <form id="approval-action-form" class="flex flex-col md:flex-row gap-3 w-full md:w-auto" 
+            hx-post="{% url 'approve-action' approval.id %}" hx-target="#action-message" hx-swap="innerHTML">
+        {% csrf_token %}
+        <textarea name="comment"  placeholder="Add a comment (optional)" 
+                  class="border border-gray-300 rounded-lg p-2 w-full md:w-64 focus:ring-2 focus:ring-blue-400 focus:outline-none"></textarea>
+        <div class="flex gap-2 mt-2 md:mt-0">
+          <button type="submit" name="action" value="approve" 
+                  class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition shadow-sm">Approve</button>
+          <button type="submit" name="action" value="reject" 
+                  class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition shadow-sm">Reject</button>
+        </div>
+      </form>
+      {% endif %}
+    </div>
+
+    <div id="action-message"></div>
+
+    <!-- Approval Details Card -->
+    <div class="bg-white shadow-md rounded-xl p-6 space-y-4">
+
+      <!-- Status Badge -->
+      <div class="flex items-center justify-between">
+        <span class="text-gray-600 font-medium">Level {{ approval.level }} | Current Approver: {{ approval.approver.full_name }}</span>
+        <span class="px-3 py-1 rounded-full text-sm font-semibold
+                     {% if approval.status == 'pending' %} bg-yellow-100 text-yellow-800
+                     {% elif approval.status == 'approved' %} bg-green-100 text-green-800
+                     {% else %} bg-red-100 text-red-800{% endif %}">
+          {{ approval.status|capfirst }}
+        </span>
+      </div>
+
+      <!-- Rich Content -->
+      {% if approval.rich_content %}
+      <div>
+        <h3 class="font-semibold text-gray-700 mb-2">Content</h3>
+        <div class="p-4 bg-gray-50 rounded-lg border border-gray-200 prose max-w-full">
+          {{ approval.rich_content|safe }}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Attachments -->
+      {% if approval.attachments.exists %}
+<div class="mt-6 bg-gray-50 p-4 rounded-xl shadow-sm">
+    <h3 class="font-semibold text-gray-800 mb-3">Attachments</h3>
+    <ul class="space-y-2">
+        {% for doc in approval.attachments.all %}
+        <li>
+            <a href="{{ doc.file.url }}" target="_blank"
+               class="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm hover:bg-blue-50 transition">
+               
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                
+                <span class="text-gray-700 font-medium truncate">{{ doc.file.name }}</span>
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+
+      <!-- Comments -->
+      {% if approval.comment %}
+      <div>
+        <h3 class="font-semibold text-gray-700 mb-2">Comments</h3>
+        <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg whitespace-pre-line text-gray-800">
+          {{ approval.comment }}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+</main>
+{% endblock %}

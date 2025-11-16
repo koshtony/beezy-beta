@@ -3,8 +3,8 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
-from ckeditor_uploader.fields import RichTextUploadingField
 from users.models import Department, SubDepartment, Role, Employee
+from tinymce.models import HTMLField
 
 User = get_user_model()
 
@@ -84,8 +84,8 @@ class ApprovalRecord(models.Model):
     creator = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="created_approvals")
 
     # Generic link to the object being approved
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, blank=True, null=True)
+    object_id = models.PositiveIntegerField(blank=True, null=True)
     content_object = GenericForeignKey("content_type", "object_id")
 
     level = models.PositiveIntegerField(default=1)
@@ -97,8 +97,8 @@ class ApprovalRecord(models.Model):
     was_notified = models.BooleanField(default=False)
 
     # Rich content & documents
-    rich_content = RichTextUploadingField(blank=True, null=True)
-    document_attachments = models.FileField(upload_to='approval_docs/', blank=True, null=True)
+    rich_content = HTMLField(blank=True, null=True)
+  
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -178,3 +178,16 @@ class ApprovalRecord(models.Model):
             is_proper_approver=next_flow.is_proper_approver,
             was_notified=next_flow.notify_approver,
         )
+
+def approval_attachment_path(instance, filename):
+    """
+    Returns a dynamic path for each approval's attachment:
+    MEDIA_ROOT/approvals/<approval_id>/<filename>
+    """
+    return f"approvals/{instance.approval.id}/{filename}"
+
+class ApprovalAttachment(models.Model):
+    approval = models.ForeignKey('ApprovalRecord', on_delete=models.CASCADE, related_name='attachments')
+    file = models.FileField(upload_to=approval_attachment_path)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    uploadedby = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True)

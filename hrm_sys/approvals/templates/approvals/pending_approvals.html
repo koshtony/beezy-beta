@@ -1,0 +1,58 @@
+{% extends "configs/base.html" %}
+{% load static %}
+
+{% block content %}
+{% include 'configs/partials/sidebar.html' %}
+
+<main class="ease-soft-in-out xl:ml-68.5 relative h-full max-h-screen rounded-xl transition-all duration-200 p-6">
+  {% include 'configs/partials/main-top-nav.html' %}
+
+  <div class="bg-white rounded-xl shadow p-6 max-w-6xl mx-auto">
+    {% include 'approvals/partials/approval_tabs.html' %}
+    <br>
+    <h6 class="text-3xl font-semibold mb-6 text-gray-800">My Pending Approvals</h6>
+
+    {% if approvals %}
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Approval Type</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted By</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sub-Department</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            {% for approval in approvals %}
+              <tr>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ approval.approval_type.name }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ approval.creator.full_name }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ approval.creator.department.name }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ approval.creator.sub_department.name }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ approval.level }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 flex space-x-2 items-center">
+
+                  <div id="approval-message-{{ approval.id }}"></div>
+
+                
+
+                  <!-- View Details -->
+                  <a href="{% url 'approval-detail' approval.id %}"
+                     class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition text-sm">
+                     View Details
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-gray-500 text-center py-6">No pending approvals found.</p>
+    {% endif %}
+  </div>
+</main>
+{% endblock %}
