@@ -178,6 +178,26 @@ class ApprovalRecord(models.Model):
             is_proper_approver=next_flow.is_proper_approver,
             was_notified=next_flow.notify_approver,
         )
+    
+    @property
+    def is_editable(self):
+        """
+        Returns True if this approval can be edited.
+        Editable only if **no stage** for the same content object has been approved.
+        """
+        # Get all approvals for the same content object
+        stages = ApprovalRecord.objects.filter(
+            content_type=self.content_type,
+            object_id=self.object_id
+        )
+
+        # If any stage is approved, this record is not editable
+        if stages.filter(status='approved').exists():
+            return False
+
+        return True
+    
+    
 
 def approval_attachment_path(instance, filename):
     """

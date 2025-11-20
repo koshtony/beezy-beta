@@ -20,6 +20,7 @@ urlpatterns = [
     path("approval-detail/<int:approval_id>/", web_views.approval_detail, name="approval-detail"),
     path("my-created/", web_views.my_created_approvals, name="my-created-approvals"),
     path("search-approvals/", web_views.search_my_created_approvals, name="search-my-created-approvals"),
+    path("edit-approval/<int:approval_id>/", web_views.edit_approval, name="edit-approval"),
    
     
 ]

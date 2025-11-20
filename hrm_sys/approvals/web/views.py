@@ -5,6 +5,7 @@ from django.views.decorators.http import require_http_methods,require_POST
 from django.contrib import messages
 from approvals.forms import ApprovalCreateForm
 from approvals.models import ApprovalType, ApprovalFlow, ApprovalRecord, ApprovalAttachment
+from django.contrib.auth.decorators import login_required
 from users.models import Employee
 from django.core.files.storage import default_storage
 from datetime import datetime
@@ -269,6 +270,7 @@ def my_created_approvals(request):
     })
 
 
+
 def search_my_created_approvals(request: HttpRequest):
     """
     Returns filtered approval records based on search query or status.
@@ -281,7 +283,7 @@ def search_my_created_approvals(request: HttpRequest):
 
     approvals = ApprovalRecord.objects.filter(creator=user).select_related(
         "approval_type", "approver", "creator"
-    ).prefetch_related("approval_type__flows").order_by("-created_at")[:5]
+    ).prefetch_related("approval_type__flows").order_by("-created_at")
 
     # Apply status filter
     if status_filter == "approved":
@@ -379,8 +381,60 @@ def build_approval_timeline(approval_records):
     return timeline_items
 
 
+@login_required
+def edit_approval(request, approval_id):
+    # Get the approval record
+    approval = get_object_or_404(ApprovalRecord, id=approval_id)
+    employee = Employee.objects.get(employee_code=request.user.username)
 
+    # -------------------------
+    # CHECK EDITABILITY
+    # -------------------------
+    # Editable only if current level is 1
+    editable = approval.level == 1
 
+    # -------------------------
+    # POST REQUEST
+    # -------------------------
+    if request.method == "POST":
+        if not editable:
+            html = """
+            <div class='bg-red-100 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm'>
+                You cannot edit this approval because it has progressed beyond level 1.
+            </div>
+            """
+            return HttpResponse(html)
+
+        # Update comment/description
+        approval.comment = request.POST.get("comment", "").strip()
+        approval.save()
+
+        # Handle attachments
+        files = request.FILES.getlist("attachment")
+        for f in files:
+            if not approval.attachments.filter(file=f.name).exists():
+                ApprovalAttachment.objects.create(
+                    approval=approval,
+                    file=f,
+                    uploadedby=employee,
+                )
+
+        # HTMX success response
+        html = """
+        <div class="bg-green-100 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm">
+            Approval updated successfully!
+        </div>
+        """
+        return HttpResponse(html)
+
+    # -------------------------
+    # GET REQUEST → Load page
+    # -------------------------
+    context = {
+        "approval": approval,
+        "editable": editable,
+    }
+    return render(request, "approvals/edit_approval.html", context)
 
 
 
