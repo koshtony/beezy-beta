@@ -66,10 +66,15 @@
       </div>
 
       <!-- ---------- SUBMIT ---------- -->
-      <div class="mt-7 flex justify-end">
+      <div class="mt-7 flex justify-end items-center space-x-3">
         <button type="submit"
-                class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
-          Submit Approval
+                class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition flex items-center"
+                id="submit-btn">
+          <svg id="spinner" class="animate-spin h-5 w-5 mr-2 hidden text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+          </svg>
+          <span>Submit Approval</span>
         </button>
       </div>
     </form>
@@ -83,9 +88,9 @@
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
 <script>
-/* JS REMAINS UNCHANGED — Only layout was improved */
 document.addEventListener('DOMContentLoaded', function() {
 
+    // Choices.js for Approval Type
     new Choices('#approval-type-select', {
         searchEnabled: true,
         shouldSort: false
@@ -97,15 +102,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function renderChips() {
         chipsContainer.innerHTML = '';
+
+        // Remove old hidden inputs
+        document.querySelectorAll('input[name="approvers"]').forEach(el => el.remove());
+
         selectedApprovers.forEach((appr, index) => {
+            // Chip
             const chip = document.createElement('div');
-            chip.className =
-                'flex items-center bg-green-100 text-green-900 px-3 py-1 rounded-full shadow-sm space-x-2';
+            chip.className = 'flex items-center bg-green-100 text-green-900 px-3 py-1 rounded-full shadow-sm space-x-2';
             chip.innerHTML = `
                 <span class="font-medium">${appr.name}</span>
                 <button type="button" class="text-red-500 font-bold" onclick="removeApprover(${index})">&times;</button>
             `;
             chipsContainer.appendChild(chip);
+
+            // Hidden input per approver
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'approvers';
+            hiddenInput.value = appr.id;
+            document.getElementById('approval-form').appendChild(hiddenInput);
         });
     }
 
@@ -118,13 +134,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (evt.detail.target.id === "approvers-chips") {
             selectedApprovers = [];
             evt.detail.target.querySelectorAll('option').forEach(opt => {
-                selectedApprovers.push({ id: opt.value, name: opt.text });
+                if(opt.value) selectedApprovers.push({ id: opt.value, name: opt.text });
             });
             renderChips();
         }
     });
 
     /* FILE UPLOADS */
+    function initFileUpload() {
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('file-input');
     const filePreview = document.getElementById('file-preview');
@@ -143,8 +160,7 @@ document.addEventListener('DOMContentLoaded', function() {
         filePreview.innerHTML = '';
         filesList.forEach((file, index) => {
             const div = document.createElement('div');
-            div.className =
-                'flex items-center justify-between p-2 border rounded-lg bg-gray-50 shadow-sm';
+            div.className = 'flex items-center justify-between p-2 border rounded-lg bg-gray-50 shadow-sm';
             div.innerHTML = `
                 <span class="truncate">${file.name}</span>
                 <button type="button" class="text-red-600 text-sm" onclick="removeFile(${index})">Remove</button>
@@ -153,30 +169,46 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function removeFile(index) {
+    window.removeFile = function(index) {
         filesList.splice(index, 1);
         updatePreview();
     }
 
-    dropzone.onclick = () => fileInput.click();
-    dropzone.ondragover = e => { e.preventDefault(); dropzone.classList.add('bg-gray-100'); };
-    dropzone.ondragleave = () => dropzone.classList.remove('bg-gray-100');
-    dropzone.ondrop = e => { 
-        e.preventDefault(); 
-        dropzone.classList.remove('bg-gray-100'); 
-        addFiles(e.dataTransfer.files); 
-    };
+    if(dropzone && fileInput){
+        dropzone.onclick = () => fileInput.click();
+        dropzone.ondragover = e => { e.preventDefault(); dropzone.classList.add('bg-gray-100'); };
+        dropzone.ondragleave = () => dropzone.classList.remove('bg-gray-100');
+        dropzone.ondrop = e => { 
+            e.preventDefault(); 
+            dropzone.classList.remove('bg-gray-100'); 
+            addFiles(e.dataTransfer.files); 
+        };
 
-    fileInput.onchange = e => {
-        addFiles(e.target.files);
-        e.target.value = '';
-    };
+        fileInput.onchange = e => {
+            addFiles(e.target.files);
+            e.target.value = '';
+        };
+    }
+}
 
-    /* FORM SUBMIT */
-    document.getElementById('approval-form').addEventListener('submit', function(e) {
+// Initialize on DOM load
+document.addEventListener('DOMContentLoaded', initFileUpload);
+
+// Re-initialize after HTMX swaps
+document.body.addEventListener('htmx:afterSwap', function(evt) {
+    if(evt.detail.target.id === "approval-form" || evt.detail.target.closest('#approval-form')) {
+        initFileUpload();
+    }
+});
+ 
+    /* FORM SUBMIT WITH SPINNER */
+    const form = document.getElementById('approval-form');
+    const spinner = document.getElementById('spinner');
+    form.addEventListener('submit', function(e) {
         e.preventDefault();
-        const formData = new FormData(this);
+        spinner.classList.remove('hidden');
 
+        const formData = new FormData(this);
         selectedApprovers.forEach(appr => formData.append('approvers', appr.id));
         filesList.forEach(file => formData.append('attachments', file));
 
@@ -186,8 +218,13 @@ document.addEventListener('DOMContentLoaded', function() {
             body: formData
         })
         .then(response => response.text())
-        .then(html => document.getElementById('form-messages').innerHTML = html);
+        .then(html => {
+            document.getElementById('form-messages').innerHTML = html;
+            spinner.classList.add('hidden');
+        })
+        .catch(() => spinner.classList.add('hidden'));
     });
+
 });
 </script>
 

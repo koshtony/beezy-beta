@@ -2,119 +2,232 @@
 {% load static %}
 
 {% block content %}
+<style>
+     .htmx-indicator {
+        opacity: 0;
+        visibility: hidden;
+    }
+    .htmx-request .htmx-indicator,
+    .htmx-request.htmx-indicator {
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 200ms ease-in;
+    }
+</style>
 
 {% include 'configs/partials/sidebar.html' %}
 
-<main class="ease-soft-in-out xl:ml-68.5 relative h-full max-h-screen rounded-xl transition-all duration-200">
+<main class="ease-soft-in-out xl:ml-68.5 relative h-full max-h-screen rounded-xl transition-all duration-200 p-4 sm:p-6">
 
-    {% include 'configs/partials/main-top-nav.html' %}
+  {% include 'configs/partials/main-top-nav.html' %}
 
-    <div class="w-full px-4 sm:px-6 py-6 mx-auto">
+  <div class="bg-white rounded-xl shadow p-6 sm:p-8 max-w-6xl mx-auto mt-6">
 
-        <div class="max-w-2xl mx-auto" id="edit-approval-container">
+    {% include 'approvals/partials/approval_tabs.html' %}
+    <h6 class="text-2xl sm:text-3xl font-semibold mb-6 text-gray-800">
+      Edit Approval Request
+    </h6>
 
-            <!-- Card -->
-            <div class="bg-white shadow-md rounded-xl p-6">
-
-                <!-- Header -->
-                <div class="flex justify-between items-center mb-4">
-                    <h1 class="text-xl font-bold text-gray-800">Edit Approval</h1>
-
-                    <a href="{% url 'my-created-approvals' %}"
-                       class="text-sm text-blue-600 hover:underline">
-                        ← Back
-                    </a>
-                </div>
-                {{editable}}
-                <!-- If not editable -->
-                {% if not editable %}
-                <div class="bg-red-100 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-                    This approval cannot be edited because it has been approved at a stage.
-                </div>
-                {% endif %}
-
-                <!-- HTMX Success Message (appears after save) -->
-                <div id="edit-alert"></div>
-
-                <!-- Form -->
-                <form
-                    method="POST"
-                    enctype="multipart/form-data"
-                    hx-post="{% url 'edit-approval' approval.id %}"
-                    hx-target="#edit-alert"
-                    hx-swap="innerHTML"
-                    hx-indicator="#save-spinner"
-                    class="space-y-4"
-                >
-                    {% csrf_token %}
-
-                    <!-- Approval Type -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Approval Type
-                        </label>
-                        <input type="text"
-                               value="{{ approval.approval_type.name }}"
-                               disabled
-                               class="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed">
-                    </div>
-
-                    <!-- Requested By -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Requested By
-                        </label>
-                        <input type="text"
-                               value="{{ approval.creator.full_name }}"
-                               disabled
-                               class="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed">
-                    </div>
-
-                    <!-- Description -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Description / Reason</label>
-                        <textarea name="description"
-                                  rows="4"
-                                  class="w-full px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                                  {% if not editable %}disabled{% endif %}>{{ approval.description }}</textarea>
-                    </div>
-
-                    <!-- Attachment -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Attach Document (Optional)</label>
-                        <input type="file"
-                               name="attachment"
-                               class="w-full text-sm"
-                               {% if not editable %}disabled{% endif %}>
-                    </div>
-
-                    <!-- Buttons -->
-                    <div class="pt-4 flex justify-end gap-3">
-                        <a href="{% url 'my-created-approvals' %}"
-                           class="px-4 py-2 rounded-lg bg-gray-200 text-gray-800 hover:bg-gray-300 text-sm">
-                            Cancel
-                        </a>
-
-                        <button type="submit"
-                                class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700 transition
-                                {% if not editable %}opacity-40 cursor-not-allowed{% endif %}"
-                                {% if not editable %}disabled{% endif %}>
-                            <span id="save-spinner" class="htmx-indicator">
-                                <svg class="animate-spin h-4 w-4 mr-2 inline-block text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke-width="4"></circle>
-                                    <path class="opacity-75" stroke-width="4" d="M4 12a8 8 0 018-8"></path>
-                                </svg>
-                            </span>
-                            Save Changes
-                        </button>
-                    </div>
-                </form>
-
-            </div>
-        </div>
-
+    {% if not editable %}
+    <div class="bg-red-100 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+        This approval cannot be edited because a stage has already been approved.
     </div>
+    {% endif %}
 
+    <form method="POST" enctype="multipart/form-data" id="approval-form"
+          hx-post="{% url 'edit-approval' approval.id %}"
+          hx-target="#form-messages"
+          hx-swap="innerHTML"
+          hx-indicator="#save-spinner">
+      {% csrf_token %}
+      <div id="form-messages"></div>
+
+      <!-- Approval Type -->
+      <div class="mb-5">
+        <label class="block mb-2 font-medium text-gray-800">Approval Type</label>
+        <select name="approval_type"
+                id="approval-type-select"
+                class="approval-type-select w-full rounded-lg"
+                {% if not editable %}disabled{% endif %}>
+          {% for at in form.fields.approval_type.queryset %}
+          <option value="{{ at.id }}" {% if at == approval.approval_type %}selected{% endif %}>
+            {{ at.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Approvers -->
+      <div class="mb-5">
+        <label class="block mb-2 font-medium text-gray-800">Approvers</label>
+        <div id="approvers-chips"
+             class="flex flex-wrap gap-2 p-3 border rounded-lg min-h-[56px] bg-gray-50">
+          {% for stage in stages %}
+          <div class="flex items-center bg-green-100 text-green-900 px-3 py-1 rounded-full shadow-sm space-x-2 chip"
+               data-id="{{ stage.approver.id }}">
+            <span class="font-medium">{{ stage.approver.full_name }} - Level {{ stage.level }}</span>
+            {% if editable %}
+            <button type="button" class="text-red-500 font-bold remove-chip">&times;</button>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        <input type="text" id="approvers-input" class="hidden" autocomplete="off">
+      </div>
+
+      <!-- Comment (small textarea) -->
+      <div class="mb-5">
+        <label class="block mb-2 font-medium text-gray-800">Comment</label>
+        <textarea name="comment"
+                  rows="3"
+                  class="w-full px-3 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                  {% if not editable %}disabled{% endif %}>{{ approval.comment }}</textarea>
+      </div>
+
+      <!-- Rich Content -->
+      <div class="mb-5">
+        {{ form.rich_content.label_tag }}
+        {{ form.rich_content }}
+        {{ form.media }}
+        {% if not editable %}
+        <script>
+          document.addEventListener('DOMContentLoaded', function() {
+              document.querySelector('trix-editor').setAttribute('disabled', true);
+          });
+        </script>
+        {% endif %}
+      </div>
+
+      <!-- Existing Files -->
+      <div class="mb-5">
+        <label class="block mb-2 font-medium text-gray-800">Existing Files</label>
+        <div id="existing-files" class="space-y-2">
+          {% for f in initial_files %}
+          <div class="flex items-center justify-between p-3 border rounded-lg bg-gray-100 shadow-sm">
+              <a href="{{ f.file.url }}" target="_blank" class="text-blue-600 hover:underline">
+                  {{ f.file.name }}
+              </a>
+              {% if editable %}
+              <label class="flex items-center space-x-2 text-sm text-red-600">
+                  <input type="checkbox" name="remove_files" value="{{ f.id }}" class="w-4 h-4">
+                  <span>Remove</span>
+              </label>
+              {% endif %}
+          </div>
+          {% empty %}
+          <p class="text-gray-500">No files attached.</p>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Add New Files -->
+      {% if editable %}
+      <div class="mb-5">
+        <label class="block mb-2 font-medium text-gray-800">Add New Attachments</label>
+        <div id="dropzone"
+             class="border-2 border-dashed border-gray-400 rounded-xl p-6 text-center cursor-pointer transition hover:bg-gray-100">
+          <p class="text-gray-500 text-sm sm:text-base">Drag & drop files here or click to upload</p>
+          <input type="file" name="new_files" id="file-input" multiple class="hidden">
+        </div>
+        <div id="file-preview" class="mt-3 space-y-2"></div>
+      </div>
+      {% endif %}
+
+      <!-- Submit -->
+      {% if editable %}
+      <div class="mt-7 flex justify-end">
+        <button type="submit"
+                class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition flex items-center space-x-2">
+          <span id="save-spinner" class="htmx-indicator">
+            <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+            </svg>
+          </span>
+          <span>Update Approval</span>
+        </button>
+      </div>
+      {% endif %}
+
+    </form>
+  </div>
 </main>
+
+<!-- Choices.js for Approval Type -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+
+    // Choices.js for Approval Type
+    new Choices('#approval-type-select', { searchEnabled: true, shouldSort: false });
+
+    // Prefill Approvers
+    let selectedApprovers = [];
+    document.querySelectorAll('#approvers-chips .chip').forEach(chip => {
+        selectedApprovers.push({
+            id: chip.dataset.id,
+            name: chip.querySelector('span').innerText
+        });
+    });
+
+    function renderChips() {
+        const container = document.getElementById('approvers-chips');
+        container.innerHTML = '';
+        selectedApprovers.forEach((appr, index) => {
+            const div = document.createElement('div');
+            div.className = "flex items-center bg-green-100 text-green-900 px-3 py-1 rounded-full shadow-sm space-x-2";
+            div.innerHTML = `
+                <span>${appr.name}</span>
+                <button type="button" class="text-red-500 font-bold" onclick="removeApprover(${index})">&times;</button>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    window.removeApprover = function(index) {
+        selectedApprovers.splice(index, 1);
+        renderChips();
+    };
+
+    // Drag & Drop Files
+    const dropzone = document.getElementById("dropzone");
+    const fileInput = document.getElementById("file-input");
+    const filePreview = document.getElementById("file-preview");
+    let filesList = [];
+
+    if(dropzone){
+        dropzone.onclick = () => fileInput.click();
+        dropzone.ondragover = e => e.preventDefault();
+        dropzone.ondrop = e => {
+            e.preventDefault();
+            for (const f of e.dataTransfer.files) filesList.push(f);
+            updatePreview();
+        };
+        fileInput.onchange = () => {
+            for (const f of fileInput.files) filesList.push(f);
+            updatePreview();
+        };
+    }
+
+    function updatePreview() {
+        filePreview.innerHTML = "";
+        filesList.forEach((file, i) => {
+            filePreview.innerHTML += `
+            <div class="flex items-center justify-between p-2 border rounded-lg bg-gray-50 shadow-sm">
+                <span>${file.name}</span>
+                <button type="button" onclick="removeFile(${i})" class="text-red-600 text-sm">Remove</button>
+            </div>
+            `;
+        });
+    }
+
+    window.removeFile = function(i) {
+        filesList.splice(i, 1);
+        updatePreview();
+    };
+});
+</script>
 
 {% endblock %}

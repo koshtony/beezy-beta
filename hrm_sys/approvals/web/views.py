@@ -21,6 +21,8 @@ def create_approval(request):
             approval_type = form.cleaned_data["approval_type"]
             approvers = form.cleaned_data["approvers"]
             rich_content = form.cleaned_data["rich_content"]
+            
+            print(approvers)
 
             # Assign to first approver
             first_approver = approvers.first() if approvers.exists() else None
@@ -386,6 +388,26 @@ def edit_approval(request, approval_id):
     # Get the approval record
     approval = get_object_or_404(ApprovalRecord, id=approval_id)
     employee = Employee.objects.get(employee_code=request.user.username)
+    
+ 
+
+    form = ApprovalCreateForm(instance=approval)
+    
+    records = ApprovalRecord.objects.filter(
+    content_type=approval.content_type,
+    object_id=approval.object_id
+    ).order_by("level", "id")   # ensure stable order
+
+    unique_levels = {}
+    for r in records:
+        if r.level not in unique_levels:  # first record for this level only
+            unique_levels[r.level] = r
+
+    stages = list(unique_levels.values())
+    # queryset
+    initial_files = ApprovalAttachment.objects.filter(approval=approval)
+    
+ 
 
     # -------------------------
     # CHECK EDITABILITY
@@ -404,13 +426,19 @@ def edit_approval(request, approval_id):
             </div>
             """
             return HttpResponse(html)
-
+        
         # Update comment/description
         approval.comment = request.POST.get("comment", "").strip()
         approval.save()
+        
+        remove_ids = request.POST.getlist("remove_files")
+        print("Removing attachments:", remove_ids)
+        if remove_ids:
+            ApprovalAttachment.objects.filter(id__in=remove_ids).delete()
 
         # Handle attachments
-        files = request.FILES.getlist("attachment")
+        files = request.FILES.getlist("new_files")
+        print(files)
         for f in files:
             if not approval.attachments.filter(file=f.name).exists():
                 ApprovalAttachment.objects.create(
@@ -433,6 +461,9 @@ def edit_approval(request, approval_id):
     context = {
         "approval": approval,
         "editable": editable,
+        "stages": stages,
+        "initial_files": initial_files,
+        "form": form,
     }
     return render(request, "approvals/edit_approval.html", context)
 
