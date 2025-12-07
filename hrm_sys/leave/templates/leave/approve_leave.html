@@ -1,0 +1,74 @@
+{% extends "configs/base.html" %}
+{% block content %}
+
+{% include 'configs/partials/sidebar.html' %}
+
+  <main class="ease-soft-in-out xl:ml-68.5 relative h-full max-h-screen rounded-xl transition-all duration-200">
+    {% include 'configs/partials/main-top-nav.html' %}
+
+<div class="max-w-3xl mx-auto bg-white shadow rounded-xl p-6 mt-6">
+  <h2 class="text-2xl font-bold text-gray-800 mb-6">Approve Leave Request</h2>
+
+  <!-- Leave details -->
+  <div class="space-y-3 text-sm text-gray-700">
+    <p><span class="font-semibold">Employee:</span> {{ leave_request.employee.full_name }}</p>
+    <p><span class="font-semibold">Leave Type:</span> {{ leave_request.leave_type.name }}</p>
+    <p><span class="font-semibold">Dates:</span> 📅 {{ leave_request.start_date }} → {{ leave_request.end_date }}</p>
+    <p><span class="font-semibold">Days:</span> {{ leave_request.total_days }}</p>
+    <p><span class="font-semibold">Reason:</span> {{ leave_request.reason|default:"-" }}</p>
+    <p><span class="font-semibold">Current Step:</span> {{ leave_request.current_step }}</p>
+    <p><span class="font-semibold">Status:</span> {{ leave_request.status|title }}</p>
+
+    {% if leave_request.attachment %}
+      <p><span class="font-semibold">Attachment:</span>
+        <a href="{{ leave_request.attachment.url }}" target="_blank"
+           class="text-blue-600 hover:underline">📎 View File</a>
+      </p>
+    {% endif %}
+  </div>
+
+  <!-- Approve/Reject form with HTMX -->
+  <div class="mt-6" id="approval-form">
+    <form hx-post="{% url 'approve-leave-action' leave_request.id %}"
+          hx-target="#approval-form"
+          hx-swap="outerHTML"
+          hx-indicator="#spinner"
+          class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label for="remarks" class="block text-sm font-medium text-gray-700">Remarks (optional)</label>
+        <textarea id="remarks" name="remarks" rows="3"
+                  class="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-4">
+        <button type="submit" name="action" value="approved"
+                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+          ✅ Approve
+        </button>
+        <button type="submit" name="action" value="rejected"
+                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+          ❌ Reject
+        </button>
+      </div>
+    </form>
+
+    <!-- Spinner -->
+    <div id="spinner" class="htmx-indicator hidden mt-4 text-center">
+      <svg class="animate-spin h-6 w-6 text-blue-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" stroke-width="4" class="opacity-25"/>
+        <path class="opacity-75" stroke-width="4" d="M4 12a8 8 0 018-8"/>
+      </svg>
+      <p class="text-sm text-gray-500 mt-2">Processing...</p>
+    </div>
+  </div>
+
+  <!-- Back link -->
+  <div class="mt-6">
+    <a href="{% url 'pending-leaves' %}" class="text-sm text-blue-600 hover:underline">← Back to pending approvals</a>
+  </div>
+</div>
+    </main>
+
+<script src="https://unpkg.com/htmx.org@1.9.3"></script>
+{% endblock %}

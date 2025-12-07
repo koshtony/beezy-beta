@@ -4,8 +4,8 @@ from rest_framework.response import Response
 from django.db import models
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
-from .models import LeaveRequest, LeaveApprovalRecord, LeaveApprover
-from .serializers import LeaveRequestSerializer, LeaveApprovalRecordSerializer
+from leave.models import LeaveRequest, LeaveApprovalRecord, LeaveApprover
+from leave.serializers import LeaveRequestSerializer, LeaveApprovalRecordSerializer
 from users.models import Employee
 
 

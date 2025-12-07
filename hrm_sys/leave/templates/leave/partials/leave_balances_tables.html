@@ -1,0 +1,121 @@
+<div class="bg-gradient-to-br from-white to-gray-50 shadow-xl rounded-2xl overflow-hidden">
+  <h3 class="text-2xl font-bold px-4 pt-4 text-gray-800">Leave Balances</h3>
+
+  <div class="overflow-x-auto mt-4">
+    <table class="min-w-full divide-y divide-gray-200 text-sm sm:text-base">
+      <!-- Table headers hidden on mobile -->
+      <thead class="bg-blue-50 hidden sm:table-header-group">
+        <tr>
+          <th class="px-6 py-3 text-left font-semibold text-blue-700 uppercase">Employee</th>
+          <th class="px-6 py-3 text-left font-semibold text-blue-700 uppercase">Leave Type</th>
+          <th class="px-6 py-3 text-left font-semibold text-blue-700 uppercase">Year</th>
+          <th class="px-6 py-3 text-left font-semibold text-blue-700 uppercase">Allocated</th>
+          <th class="px-6 py-3 text-left font-semibold text-blue-700 uppercase">Used</th>
+          <th class="px-6 py-3 text-left font-semibold text-blue-700 uppercase">Remaining</th>
+          <th class="px-6 py-3 text-left font-semibold text-blue-700 uppercase">History</th>
+        </tr>
+      </thead>
+
+      {% for b in balances %}
+        <tbody x-data="{ open: false }" x-cloak>
+          <!-- Balance row -->
+          <tr class="sm:table-row block border-b sm:border-0 hover:bg-blue-50 transition">
+            <td class="px-4 py-2 block sm:table-cell">
+              <span class="sm:hidden font-semibold text-gray-600">Employee: </span>{{ b.employee.full_name }}
+            </td>
+            <td class="px-4 py-2 block sm:table-cell">
+              <span class="sm:hidden font-semibold text-gray-600">Type: </span>{{ b.leave_type.name }}
+            </td>
+            <td class="px-4 py-2 block sm:table-cell">
+              <span class="sm:hidden font-semibold text-gray-600">Year: </span>{{ b.year }}
+            </td>
+            <td class="px-4 py-2 block sm:table-cell">
+              <span class="sm:hidden font-semibold text-gray-600">Allocated: </span>{{ b.allocated_days }}
+            </td>
+            <td class="px-4 py-2 block sm:table-cell">
+              <span class="sm:hidden font-semibold text-gray-600">Used: </span>{{ b.used_days }}
+            </td>
+            <td class="px-4 py-2 block sm:table-cell">
+              <span class="sm:hidden font-semibold text-gray-600">Remaining: </span>{{ b.remaining_days }}
+            </td>
+            <td class="px-4 py-2 block sm:table-cell">
+              <button @click="open = !open"
+                      class="w-full sm:w-auto px-3 py-1.5 text-sm rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow">
+                <span x-show="!open">Show History</span>
+                <span x-show="open">Hide History</span>
+              </button>
+            </td>
+          </tr>
+
+          <!-- History container -->
+          <tr x-show="open"
+              x-transition:enter="transition ease-out duration-300"
+              x-transition:enter-start="opacity-0 -translate-y-2"
+              x-transition:enter-end="opacity-100 translate-y-0"
+              x-transition:leave="transition ease-in duration-200"
+              x-transition:leave-start="opacity-100 translate-y-0"
+              x-transition:leave-end="opacity-0 -translate-y-2">
+            <td colspan="7" class="px-4 py-4 bg-gray-50">
+              <div class="rounded-xl border border-gray-200 bg-white shadow-md p-4">
+                <h4 class="text-lg font-semibold text-gray-800 mb-4">Leave History</h4>
+
+                {% for r in history %}
+                  {% if r.employee_id == b.employee_id and r.leave_type_id == b.leave_type_id %}
+                    <!-- History entry -->
+                    <div class="mb-6 pl-2 border-l-4 border-blue-400">
+                      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                          <span class="text-blue-600 text-lg">📅</span>
+                          <span class="font-medium text-gray-900">{{ r.start_date }} → {{ r.end_date }}</span>
+                          <span class="ml-2 text-sm text-gray-600">({{ r.total_days }} days)</span>
+                        </div>
+                        <div>
+                          {% if r.status == "approved" %}
+                            <span class="px-3 py-1 text-xs font-semibold bg-green-100 text-green-700 rounded-full shadow-sm">Approved</span>
+                          {% elif r.status == "pending" %}
+                            <span class="px-3 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700 rounded-full shadow-sm">Pending</span>
+                          {% elif r.status == "rejected" %}
+                            <span class="px-3 py-1 text-xs font-semibold bg-red-100 text-red-700 rounded-full shadow-sm">Rejected</span>
+                          {% endif %}
+                        </div>
+                      </div>
+                      <p class="text-sm text-gray-600 mt-1 italic">Reason: {{ r.reason|default:"-" }}</p>
+
+                      <!-- Tree structure for approvers -->
+                      <ul class="mt-4 ml-4 space-y-3 border-l border-gray-300">
+                        {% for a in r.approval_records.all %}
+                          <li class="pl-4 relative">
+                            <span class="absolute left-0 top-2 w-2 h-2 bg-blue-500 rounded-full"></span>
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                              <span class="text-gray-800 font-medium">Step {{ a.step }} → {{ a.approver.full_name }}</span>
+                              {% if a.action == "approved" %}
+                                <span class="mt-1 sm:mt-0 px-2 py-0.5 text-xs bg-green-200 text-green-800 rounded-full">✅ Approved</span>
+                              {% elif a.action == "pending" %}
+                                <span class="mt-1 sm:mt-0 px-2 py-0.5 text-xs bg-yellow-200 text-yellow-800 rounded-full">⏳ Pending</span>
+                              {% elif a.action == "rejected" %}
+                                <span class="mt-1 sm:mt-0 px-2 py-0.5 text-xs bg-red-200 text-red-800 rounded-full">❌ Rejected</span>
+                              {% endif %}
+                            </div>
+                            <div class="text-xs text-gray-500 ml-2">at {{ a.timestamp|date:"Y-m-d H:i" }}</div>
+                          </li>
+                        {% empty %}
+                          <li class="pl-4 text-gray-500">No approvers recorded</li>
+                        {% endfor %}
+                      </ul>
+                    </div>
+                  {% endif %}
+                {% empty %}
+                  <p class="text-gray-500">No history</p>
+                {% endfor %}
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      {% empty %}
+        <tbody>
+          <tr><td colspan="7" class="text-center py-6 text-gray-500">No balances found</td></tr>
+        </tbody>
+      {% endfor %}
+    </table>
+  </div>
+</div>

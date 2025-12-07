@@ -66,9 +66,15 @@
 
     <!-- APPROVAL LIST -->
     <div id="approvals-list">
-    
-      {% include "approvals/partials/my_created_approvals_list.html" %}
+  {% if error %}
+    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+      <strong class="font-bold">Error:</strong>
+      <span class="block sm:inline">{{ error }}</span>
     </div>
+  {% else %}
+    {% include "approvals/partials/my_created_approvals_list.html" %}
+  {% endif %}
+</div>
 
   </div>
 </main>

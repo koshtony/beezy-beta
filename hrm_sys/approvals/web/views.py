@@ -2,6 +2,8 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpResponse, JsonResponse, HttpRequest
 from django.db.models import Q
 from django.views.decorators.http import require_http_methods,require_POST
+from django.core.exceptions import ObjectDoesNotExist
+
 from django.contrib import messages
 from approvals.forms import ApprovalCreateForm
 from approvals.models import ApprovalType, ApprovalFlow, ApprovalRecord, ApprovalAttachment
@@ -250,26 +252,26 @@ def approval_detail(request, approval_id):
     
 
 def my_created_approvals(request):
-    """
-    Renders the My Created Approvals page.
-    The initial page load shows all approvals; search/filter is handled separately.
-    """
-    user = Employee.objects.get(employee_code=request.user.username)
+    try:
+        user = Employee.objects.get(employee_code=request.user.username)
+    except ObjectDoesNotExist:
+        # No employee record found
+        return render(request, "approvals/my_created_approvals.html", {
+            "items": [],
+            "error": "No employee record found for your account. Please contact HR or create your profile."
+        })
 
-    # Get all approvals for this user
     approvals = ApprovalRecord.objects.filter(creator=user).select_related(
         "approval_type", "approver", "creator"
     ).prefetch_related("approval_type__flows").order_by("-created_at")[:5]
-    
- 
 
-    # Build timeline data
     items = build_approval_timeline(approvals)
-
 
     return render(request, "approvals/my_created_approvals.html", {
         "items": items,
+        "error": None
     })
+
 
 
 
