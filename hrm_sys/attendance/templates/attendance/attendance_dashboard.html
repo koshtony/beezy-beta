@@ -1,0 +1,60 @@
+{% extends "configs/base.html" %}
+{% load static %}
+
+{% block content %}
+  {% include 'configs/partials/sidebar.html' %}
+
+  <main class="ease-soft-in-out xl:ml-68.5 relative h-full max-h-screen rounded-xl transition-all duration-200">
+    {% include 'configs/partials/main-top-nav.html' %}
+
+    <section class="max-w-6xl mx-auto bg-white shadow rounded-xl p-6 mt-6">
+      <!-- Header -->
+      <header class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <h2 class="text-2xl font-bold text-gray-800">💬 Attendance Dashboard</h2>
+        <p class="text-sm text-gray-500">
+          {% if is_manager %} Manager view: all department records {% else %} Your attendance records {% endif %}
+        </p>
+      </header>
+
+      <!-- Filters -->
+      <div class="flex flex-col sm:flex-row gap-3 mb-6">
+        <!-- Search -->
+        <form hx-get="{% url 'attendance-dashboard' %}"
+              hx-target="#dashboard-container"
+              hx-trigger="keyup changed delay:300ms from:input[name='search']"
+              hx-swap="innerHTML"
+              onsubmit="return false;"
+              class="flex-1">
+          <input type="text" name="search" value="{{ request.GET.search }}"
+                 placeholder="🔍 Search by employee name or code..."
+                 class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </form>
+
+        <!-- Period Toggle -->
+        <div class="flex gap-2">
+          <a hx-get="{% url 'attendance-dashboard' %}?period=all"
+             hx-target="#dashboard-container"
+             hx-swap="innerHTML"
+             class="px-3 py-1 rounded-lg text-sm {% if toggle == 'all' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700{% endif %}">📅 All</a>
+          <a hx-get="{% url 'attendance-dashboard' %}?period=year"
+             hx-target="#dashboard-container"
+             hx-swap="innerHTML"
+             class="px-3 py-1 rounded-lg text-sm {% if toggle == 'year' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700{% endif %}">📆 Year</a>
+          <a hx-get="{% url 'attendance-dashboard' %}?period=month"
+             hx-target="#dashboard-container"
+             hx-swap="innerHTML"
+             class="px-3 py-1 rounded-lg text-sm {% if toggle == 'month' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700{% endif %}">🗓️ Month</a>
+          <a hx-get="{% url 'attendance-dashboard' %}?period=week"
+             hx-target="#dashboard-container"
+             hx-swap="innerHTML"
+             class="px-3 py-1 rounded-lg text-sm {% if toggle == 'week' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700{% endif %}">📅 Week</a>
+        </div>
+      </div>
+
+      <!-- Dashboard Content -->
+      <div id="dashboard-container">
+        {% include "attendance/partials/attendance_dashboard_content.html" %}
+      </div>
+    </section>
+  </main>
+{% endblock %}

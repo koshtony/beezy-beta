@@ -7,34 +7,44 @@
   <main class="ease-soft-in-out xl:ml-68.5 relative h-full max-h-screen rounded-xl transition-all duration-200">
     {% include 'configs/partials/main-top-nav.html' %}
 
-   <div class="max-w-6xl mx-auto bg-white shadow rounded-xl p-6 mt-6">
-  <h2 class="text-2xl font-bold text-gray-800 mb-6">My Pending Approvals</h2>
+    <!-- Page Container -->
+    <section class="max-w-6xl mx-auto bg-white shadow rounded-xl p-4 sm:p-6 mt-6">
+      <!-- Header -->
+      <header class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-2">
+        <h2 class="text-xl sm:text-2xl font-bold text-gray-800">My Pending Approvals</h2>
+        <span class="text-xs sm:text-sm text-gray-500">Manage and review leave requests</span>
+      </header>
 
-  <!-- Sticky Search Bar -->
-  <div class="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-2 mb-4">
-    <form hx-get="{% url 'pending-leaves' %}"
-          hx-target="#approvals-container"
-          hx-trigger="keyup changed delay:300ms"
-          hx-swap="innerHTML"
-          class="flex gap-2">
-      <input type="text" name="search" value="{{ search }}"
-             placeholder="Search by employee, type, reason..."
-             class="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-    </form>
-  </div>
+      <!-- Sticky Search Bar -->
+      <div class="sticky top-0 z-20 bg-white border-b border-gray-200 px-3 py-2 sm:px-4 sm:py-3 mb-6">
+        <form hx-get="{% url 'pending-leaves' %}"
+              hx-target="#approvals-container"
+              hx-trigger="keyup changed delay:300ms"
+              hx-swap="innerHTML"
+              class="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <input type="text" name="search" value="{{ search }}"
+                 placeholder="Search by employee, type, reason..."
+                 class="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="submit"
+                  class="px-3 sm:px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition">
+            Search
+          </button>
+        </form>
+      </div>
 
-  <!-- HTMX container -->
-  <div id="approvals-container">
-    {% include "leave/partials/pending_leaves_list.html" %}
-  </div>
+      <!-- Approvals List -->
+      <div id="approvals-container">
+        {% include "leave/partials/pending_leaves_list.html" %}
+      </div>
 
-  <div id="spinner" class="htmx-indicator hidden mt-4 text-center">
-    <svg class="animate-spin h-6 w-6 text-blue-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10" stroke-width="4" class="opacity-25"/>
-      <path class="opacity-75" stroke-width="4" d="M4 12a8 8 0 018-8"/>
-    </svg>
-  </div>
-</div>
+      <!-- Spinner -->
+      <div id="spinner" class="htmx-indicator hidden mt-6 text-center">
+        <svg class="animate-spin h-6 w-6 text-blue-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" stroke-width="4" class="opacity-25"/>
+          <path class="opacity-75" stroke-width="4" d="M4 12a8 8 0 018-8"/>
+        </svg>
+        <p class="text-xs sm:text-sm text-gray-500 mt-2">Loading approvals...</p>
+      </div>
+    </section>
   </main>
-
 {% endblock %}

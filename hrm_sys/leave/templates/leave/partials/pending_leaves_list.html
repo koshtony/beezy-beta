@@ -2,6 +2,7 @@
   <ul class="space-y-6">
     {% for lr in leave_requests %}
       <li id="card-{{ lr.id }}" class="border rounded-lg shadow-sm p-5 bg-gray-50">
+        <!-- Header -->
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3">
           <div>
             <p class="font-semibold text-gray-800">{{ lr.employee.full_name }}</p>
@@ -14,11 +15,13 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700">
+        <!-- Details -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700 mb-4">
           <p><span class="font-medium">📅 Dates:</span> {{ lr.start_date }} → {{ lr.end_date }}</p>
           <p><span class="font-medium">🗓 Days:</span> {{ lr.total_days }}</p>
           <p><span class="font-medium">📊 Remaining Balance:</span>
             {% if lr.balance %}
+              
               {{ lr.balance.remaining_days }}
             {% else %}
               N/A
@@ -28,45 +31,44 @@
         </div>
 
         {% if lr.attachment %}
-          <div class="mt-3">
+          <div class="mb-4">
             <span class="font-medium text-gray-700">📎 Attachment:</span>
             <a href="{{ lr.attachment.url }}" target="_blank" class="text-blue-600 hover:underline">View File</a>
           </div>
         {% endif %}
 
-        <div class="mt-4 flex flex-wrap gap-3">
-          <form method="post"
-                hx-post="{% url 'approve-leave-action' lr.id %}"
-                hx-target="#card-{{ lr.id }}"
-                hx-swap="outerHTML"
-                class="flex gap-3">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="approved">
-            <button type="submit"
-                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-              ✅ Approve
-            </button>
-          </form>
+        <!-- Footer with actions -->
+        <div class="border-t pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <!-- Remarks -->
+          <textarea name="remarks" rows="2" placeholder="Optional remarks..."
+                    class="flex-1 border rounded-md px-3 py-2 text-sm"></textarea>
 
-          <form method="post"
-                hx-post="{% url 'approve-leave-action' lr.id %}"
-                hx-target="#card-{{ lr.id }}"
-                hx-swap="outerHTML"
-                class="flex gap-3 items-start">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="rejected">
-            <textarea name="remarks" rows="2" placeholder="Optional remarks..."
-                      class="w-64 border rounded-md px-3 py-2 text-sm"></textarea>
-            <button type="submit"
-                    class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
-              ❌ Reject
-            </button>
-          </form>
+          <!-- Buttons grouped -->
+          <div class="flex gap-3">
+            <form method="post"
+                  hx-post="{% url 'approve-leave-action' lr.id %}"
+                  hx-target="#card-{{ lr.id }}"
+                  hx-swap="outerHTML">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="approved">
+              <button type="submit"
+                      class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                ✅ Approve
+              </button>
+            </form>
 
-          <a href="{% url 'approve-leave-action' lr.id %}"
-             class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
-            🔎 View page
-          </a>
+            <form method="post"
+                  hx-post="{% url 'approve-leave-action' lr.id %}"
+                  hx-target="#card-{{ lr.id }}"
+                  hx-swap="outerHTML">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="rejected">
+              <button type="submit"
+                      class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                ❌ Reject
+              </button>
+            </form>
+          </div>
         </div>
       </li>
     {% endfor %}

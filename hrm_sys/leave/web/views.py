@@ -102,7 +102,7 @@ def pending_leaves_view(request):
             lr.balance = LeaveBalance.objects.get(
                 employee=lr.employee,
                 leave_type=lr.leave_type,
-                year=lr.year
+               # year=lr.year
             )
         except LeaveBalance.DoesNotExist:
             lr.balance = None
@@ -113,7 +113,7 @@ def pending_leaves_view(request):
         "search": search,
     }
 
-    if request.headers.get("HX-Request") == "true":
+    if request.headers.get("HX-Request") == "true" and not request.headers.get("HX-Boosted"):
         return render(request, "leave/partials/pending_leaves_list.html", context)
 
     return render(request, "leave/pending_leaves.html", context)
@@ -122,10 +122,10 @@ def pending_leaves_view(request):
 @login_required
 def approve_leave_action(request, leave_id):
     try:
-        current_employee = Employee.objects.get(user=request.user)
+        current_employee = Employee.objects.get(employee_code=request.user.username)
     except Employee.DoesNotExist:
         messages.error(request, "No employee record found.")
-        return redirect("pending-approvals")
+        return redirect("pending-leaves")
 
     leave = get_object_or_404(LeaveRequest, id=leave_id)
 
@@ -138,7 +138,7 @@ def approve_leave_action(request, leave_id):
 
     if not current_record:
         messages.error(request, "You are not authorized to approve this leave.")
-        return redirect("pending-approvals")
+        return redirect("pending-leaves")
 
     if request.method == "POST":
         action = request.POST.get("action")
@@ -149,7 +149,7 @@ def approve_leave_action(request, leave_id):
         elif action == "rejected":
             current_record.reject(remarks=remarks)
             messages.success(request, "Leave rejected.")
-        return redirect("pending-approvals")
+        return redirect("pending-leaves")
 
     return render(request, "leave/approve_leave.html", {
         "leave_request": leave,

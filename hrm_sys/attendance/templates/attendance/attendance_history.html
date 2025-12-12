@@ -1,0 +1,150 @@
+{% extends "configs/base.html" %}
+{% load static %}
+{% load attendance_extras %}
+
+
+{% block content %}
+  {% include 'configs/partials/sidebar.html' %}
+
+  <main class="ease-soft-in-out xl:ml-68.5 relative h-full max-h-screen rounded-xl transition-all duration-200">
+    {% include 'configs/partials/main-top-nav.html' %}
+
+    <!-- Page Container -->
+    <section class="max-w-5xl mx-auto bg-white shadow rounded-xl p-6 mt-6">
+      
+      <!-- Back Button -->
+      <div class="mb-4">
+        <a href="{% url 'attendance-list' %}" 
+           class="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-800" hx-boost="true">
+          🔙 Back to Attendance List
+        </a>
+      </div>
+
+      <!-- Employee Header -->
+      <div class="flex flex-col sm:flex-row items-center gap-6 mb-6">
+        {% if employee.profile_image %}
+          <img src="{{ employee.profile_image.url }}" alt="Profile" 
+               class="w-24 h-24 rounded-full object-cover shadow-md">
+        {% else %}
+          <div class="w-24 h-24 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 text-lg">
+            👤
+          </div>
+        {% endif %}
+        <div>
+          <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            {{ employee.full_name }} 
+            <span class="text-gray-400 text-xl">🗂️</span>
+          </h2>
+          <p class="text-sm text-gray-500">Employee Code: {{ employee.employee_code }}</p>
+          <p class="text-sm text-gray-500">Department: {{ employee.department.name}}</p>
+          <p class="text-sm text-gray-500">Joined: {{ employee.date_of_joining|date:"Y-m-d" }}</p>
+        </div>
+      </div>
+        <div class="flex flex-wrap gap-4 mb-8">
+        <div class="flex-1 bg-gradient-to-r from-blue-100 to-blue-50 rounded-lg p-4 shadow-sm">
+          <p class="text-sm text-gray-600">📊 Records This Month</p>
+          <p class="text-2xl font-bold text-blue-700">{{ history|current_month|length }}</p>
+        </div>
+        <div class="flex-1 bg-gradient-to-r from-red-100 to-red-50 rounded-lg p-4 shadow-sm">
+          <p class="text-sm text-gray-600">⚠️ Late This Month</p>
+          <p class="text-2xl font-bold text-red-700">{{ history|current_month|count_true:"is_late_check_in" }}</p>
+        </div>
+        <div class="flex-1 bg-gradient-to-r from-yellow-100 to-yellow-50 rounded-lg p-4 shadow-sm">
+          <p class="text-sm text-gray-600">⏳ Early This Month</p>
+          <p class="text-2xl font-bold text-yellow-700">{{ history|current_month|count_true:"is_early_check_out" }}</p>
+        </div>
+        <div class="flex-1 bg-gradient-to-r from-green-100 to-green-50 rounded-lg p-4 shadow-sm">
+          <p class="text-sm text-gray-600">✅ Valid Records</p>
+          <p class="text-2xl font-bold text-green-700">{{ history|current_month|count_true:"is_valid" }}</p>
+        </div>
+      </div>
+
+      <!-- Desktop Table -->
+      <div class="hidden md:block">
+        <table class="min-w-full divide-y divide-gray-200 rounded-lg overflow-hidden shadow-sm">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">📅 Date</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">⏰ Check-In</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">🏁 Check-Out</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">⚠️ Late?</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">⏳ Early?</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase">✅ Valid?</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-200 bg-white">
+            {% for record in history %}
+            <tr class="hover:bg-gray-50 transition">
+              <td class="px-6 py-4 text-sm text-gray-700">{{ record.check_in_date|date:"Y-m-d" }}</td>
+              <td class="px-6 py-4 text-sm text-gray-700">{{ record.check_in_date|time:"H:i" }}</td>
+              <td class="px-6 py-4 text-sm text-gray-700">{{ record.check_out_date|time:"H:i" }}</td>
+              <td class="px-6 py-4">
+                {% if record.is_late_check_in %}
+                  <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-700">⚠️ Yes</span>
+                {% else %}
+                  <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-700">✔️ No</span>
+                {% endif %}
+              </td>
+              <td class="px-6 py-4">
+                {% if record.is_early_check_out %}
+                  <span class="px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-700">⏳ Yes</span>
+                {% else %}
+                  <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-700">✔️ No</span>
+                {% endif %}
+              </td>
+              <td class="px-6 py-4">
+                {% if record.is_valid %}
+                  <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-700">✅ Valid</span>
+                {% else %}
+                  <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-700">❌ Invalid</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="px-6 py-4 text-center text-gray-500">No history records found</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile Cards -->
+      <div class="md:hidden space-y-4">
+        {% for record in history %}
+        <div class="bg-white shadow rounded-lg p-4">
+          <p class="text-sm text-gray-700"><strong>📅 Date:</strong> {{ record.check_in_date|date:"Y-m-d" }}</p>
+          <p class="text-sm text-gray-700"><strong>⏰ Check-In:</strong> {{ record.check_in_date|time:"H:i" }}</p>
+          <p class="text-sm text-gray-700"><strong>🏁 Check-Out:</strong> {{ record.check_out_date|time:"H:i" }}</p>
+          <p class="text-sm">
+            <strong>⚠️ Late?:</strong>
+            {% if record.is_late_check_in %}
+              <span class="text-red-600 font-semibold">Yes</span>
+            {% else %}
+              <span class="text-green-600">No</span>
+            {% endif %}
+          </p>
+          <p class="text-sm">
+            <strong>⏳ Early?:</strong>
+            {% if record.is_early_check_out %}
+              <span class="text-yellow-600 font-semibold">Yes</span>
+            {% else %}
+              <span class="text-green-600">No</span>
+            {% endif %}
+          </p>
+          <p class="text-sm">
+            <strong>✅ Valid?:</strong>
+            {% if record.is_valid %}
+              <span class="text-green-600 font-semibold">Valid</span>
+            {% else %}
+              <span class="text-red-600 font-semibold">Invalid</span>
+            {% endif %}
+          </p>
+        </div>
+        {% empty %}
+        <p class="text-center text-gray-500">No history records found</p>
+        {% endfor %}
+      </div>
+    </section>
+  </main>
+{% endblock %}

@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions, filters,views
-from .models import Station,Attendance
+from attendance.models import Station,Attendance
 from users.models import Employee
-from .serializers import StationSerializer,AttendanceSerializer
+from attendance.serializers import StationSerializer,AttendanceSerializer
 from math import radians, sin, cos, sqrt, atan2
 from django.utils import timezone
 

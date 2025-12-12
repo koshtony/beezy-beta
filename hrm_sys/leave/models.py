@@ -133,17 +133,33 @@ class LeaveApprovalRecord(models.Model):
         return f"Step {self.step} - {self.approver.full_name} ({self.action})"
 
     # ✅ Logic to approve a step
+   # models.py
     def approve(self):
         self.action = "approved"
         self.timestamp = timezone.now()
         self.save()
 
         leave = self.leave_request
-        # Check if all steps are done
         remaining = leave.approval_records.filter(action="pending").order_by("step")
+
         if not remaining.exists():
+            # ✅ All steps approved
             leave.status = "approved"
             leave.save()
+
+            # ✅ Deduct from balance
+            try:
+                balance = LeaveBalance.objects.get(
+                    employee=leave.employee,
+                    leave_type=leave.leave_type,
+                    year=leave.start_date.year
+                )
+                balance.used_days += leave.total_days
+                balance.remaining_days = balance.allocated_days - balance.used_days
+                balance.save()
+            except LeaveBalance.DoesNotExist:
+                # Optionally create a balance record if missing
+                pass
         else:
             # Move to next step approver
             next_step = remaining.first().step
@@ -160,3 +176,5 @@ class LeaveApprovalRecord(models.Model):
         leave = self.leave_request
         leave.status = "rejected"
         leave.save()
+
+

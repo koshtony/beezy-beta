@@ -1,0 +1,84 @@
+<!-- Summary Bar -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+  <div class="bg-blue-50 rounded-lg p-4 text-center shadow-sm">
+    <p class="text-sm text-gray-600">📊 Records</p>
+    <p class="text-xl font-bold text-blue-700">{{ total_count }}</p>
+  </div>
+  <div class="bg-red-50 rounded-lg p-4 text-center shadow-sm">
+    <p class="text-sm text-gray-600">⚠️ Late</p>
+    <p class="text-xl font-bold text-red-700">{{ late_count }}</p>
+  </div>
+  <div class="bg-green-50 rounded-lg p-4 text-center shadow-sm">
+    <p class="text-sm text-gray-600">⏳ Early</p>
+    <p class="text-xl font-bold text-green-700">{{ early_count }}</p>
+  </div>
+  <div class="bg-indigo-50 rounded-lg p-4 text-center shadow-sm">
+    <p class="text-sm text-gray-600">✅ Valid</p>
+    <p class="text-xl font-bold text-indigo-700">{{ valid_count }}</p>
+  </div>
+</div>
+
+<!-- GitHub-style Chart -->
+<div class="mb-8">
+  <h3 class="text-lg font-semibold text-gray-800 mb-2">📊 Attendance Activity</h3>
+  <div class="grid grid-cols-7 gap-1">
+    {% for record in attendances %}
+      {% if record.is_late_check_in %}
+        <div class="w-4 h-4 bg-red-500 rounded" title="{{ record.check_in_date|date:'Y-m-d' }} ⚠️ Late"></div>
+      {% elif record.is_early_check_out %}
+        <div class="w-4 h-4 bg-green-500 rounded" title="{{ record.check_in_date|date:'Y-m-d' }} ⏳ Early"></div>
+      {% elif record.is_valid %}
+        <div class="w-4 h-4 bg-blue-500 rounded" title="{{ record.check_in_date|date:'Y-m-d' }} ✅ Valid"></div>
+      {% else %}
+        <div class="w-4 h-4 bg-gray-300 rounded" title="{{ record.check_in_date|date:'Y-m-d' }} ❌ Invalid"></div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  <p class="text-xs text-gray-500 mt-2">Each square = one day. Colors show attendance status.</p>
+</div>
+
+<!-- Chat-like Feed -->
+<div class="space-y-4">
+  {% for record in attendances %}
+    <div class="flex items-start gap-3">
+      {% if record.employee.profile_image %}
+        <img src="{{ record.employee.profile_image.url }}" alt="Profile"
+             class="w-10 h-10 rounded-full object-cover">
+      {% else %}
+        <div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-600">👤</div>
+      {% endif %}
+
+      <div class="flex-1">
+        <div class="bg-gray-100 rounded-lg p-3 shadow-sm">
+          <div class="flex justify-between items-center">
+            <p class="font-semibold text-gray-800">
+              {{ record.employee.full_name }}
+              <span class="text-xs text-gray-500">({{ record.employee.employee_code }})</span>
+            </p>
+            <span class="text-xs text-gray-400">{{ record.check_in_date|date:"Y-m-d H:i" }}</span>
+          </div>
+
+          <p class="text-sm text-gray-700 mt-1">
+            ⏰ In: {{ record.check_in_date|time:"H:i" }} | 🏁 Out: {{ record.check_out_date|time:"H:i" }}
+          </p>
+
+          <div class="mt-2 flex gap-2">
+            {% if record.is_late_check_in %}
+              <span class="px-2 py-1 text-xs rounded bg-red-100 text-red-700">⚠️ Late</span>
+            {% endif %}
+            {% if record.is_early_check_out %}
+              <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-700">⏳ Early</span>
+            {% endif %}
+            {% if record.is_valid %}
+              <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-700">✅ Valid</span>
+            {% else %}
+              <span class="px-2 py-1 text-xs rounded bg-gray-200 text-gray-600">❌ Invalid</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <p class="text-center text-gray-500">🙅 No records found</p>
+  {% endfor %}
+</div>
