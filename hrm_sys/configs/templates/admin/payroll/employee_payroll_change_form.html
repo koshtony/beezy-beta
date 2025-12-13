@@ -1,0 +1,13 @@
+{% extends "admin/change_form.html" %}
+{% load i18n static %}
+
+{% block submit_buttons_top %}
+    {{ block.super }}
+    {% if not is_popup %}
+        <input type="submit" value="{% trans 'Recalculate Payroll' %}" class="default" name="_recalculate">
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {{ block.super }}
+{% endblock %}

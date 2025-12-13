@@ -1,0 +1,26 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+
+{% block object-tools %}
+    <div class="object-tools">
+        <ul class="object-tools">
+            <li>
+                <a class="addlink" href="{% url 'admin:generate-bulk-payroll' %}">
+                    Generate Bulk Payroll
+                </a>
+            </li>
+        </ul>
+    </div>
+    {{ block.super }}
+{% endblock %}
+
+{% block content %}
+    {% if messages %}
+        <ul class="messagelist">
+            {% for message in messages %}
+                <li class="{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+    {{ block.super }}
+{% endblock %}

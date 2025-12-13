@@ -3,7 +3,6 @@ from django.http import HttpResponse, JsonResponse, HttpRequest
 from django.db.models import Q
 from django.views.decorators.http import require_http_methods,require_POST
 from django.core.exceptions import ObjectDoesNotExist
-
 from django.contrib import messages
 from approvals.forms import ApprovalCreateForm
 from approvals.models import ApprovalType, ApprovalFlow, ApprovalRecord, ApprovalAttachment

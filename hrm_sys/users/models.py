@@ -134,6 +134,42 @@ class Employee(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
+    # Salary related
+    bank_account_number = models.CharField(max_length=30, blank=True, null=True)
+    bank_name = models.CharField(max_length=100, blank=True, null=True)
+    
+    
+    basic_salary = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        default=0,
+        help_text="Base salary of the employee"
+    )
+
+    # Link default allowances (many-to-many)
+    allowances = models.ManyToManyField(
+        'payroll.Allowance',
+        blank=True,
+        related_name='employees',
+        help_text="Allowances applicable to this employee"
+    )
+
+    # Overtime rates
+    overtime_rate = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        default=0,
+        help_text="Standard overtime rate per hour"
+    )
+    night_overtime_rate = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        default=0,
+        help_text="Night overtime rate per hour"
+    )
+    weekend_overtime_rate = models.DecimalField(
+        max_digits=10, decimal_places=2,
+        default=0,
+        help_text="Weekend overtime rate per hour"
+    )
+    
     
     def __str__(self): return F"{self.employee_code} - {self.full_name} - {self.job_position}" 
 

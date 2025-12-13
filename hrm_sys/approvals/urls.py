@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .api.views import ApprovalViewSet
 from .api import views as api_views
-from.web import views as web_views
+from .web import views as web_views
 
 router = DefaultRouter()
 router.register("approvals", ApprovalViewSet, basename="approval")

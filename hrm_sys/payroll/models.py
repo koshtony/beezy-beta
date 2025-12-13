@@ -1,95 +1,115 @@
 from django.db import models
 from django.utils import timezone
-from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from users.models import Employee
 from approvals.models import ApprovalRecord, ApprovalType
 
-
 # ==========================================================
-#  SETTINGS MODEL — editable in admin
+# PAYROLL SETTINGS
 # ==========================================================
 class PayrollSetting(models.Model):
-    """Configurable payroll variables — editable via admin."""
-    # PAYE bands
     paye_band_1_limit = models.DecimalField(max_digits=10, decimal_places=2, default=24000)
-    paye_band_1_rate = models.DecimalField(max_digits=5, decimal_places=2, default=10.0)
-
+    paye_band_1_rate = models.DecimalField(max_digits=5, decimal_places=2, default=10.00)
     paye_band_2_limit = models.DecimalField(max_digits=10, decimal_places=2, default=40667)
-    paye_band_2_rate = models.DecimalField(max_digits=5, decimal_places=2, default=25.0)
-
-    paye_band_3_rate = models.DecimalField(max_digits=5, decimal_places=2, default=30.0)
-
-    # Statutory rates (editable)
-    nssf_rate = models.DecimalField(max_digits=5, decimal_places=2, default=6.0)  # % of gross
-    nssf_cap = models.DecimalField(max_digits=10, decimal_places=2, default=2160.00)
-    shif_rate = models.DecimalField(max_digits=5, decimal_places=2, default=2.75)  # % of gross
-    housing_levy_rate = models.DecimalField(max_digits=5, decimal_places=2, default=1.50)  # % of gross
-
-    # Overtime configuration
-    overtime_hourly_rate = models.DecimalField(
-        max_digits=10, decimal_places=2, default=150.00,
-        help_text="Default rate per overtime hour (KES)"
-    )
-
+    paye_band_2_rate = models.DecimalField(max_digits=5, decimal_places=2, default=25.00)
+    paye_band_3_rate = models.DecimalField(max_digits=5, decimal_places=2, default=30.00)
     updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        verbose_name = "Payroll Setting"
-        verbose_name_plural = "Payroll Settings"
-
-    def __str__(self):
-        return f"Payroll Settings (Last updated: {self.updated_at.date()})"
 
     @classmethod
     def get_current(cls):
-        """Get latest settings, or create default if none."""
         obj, _ = cls.objects.get_or_create(id=1)
         return obj
 
+# ==========================================================
+# PAYROLL PERIOD
+# ==========================================================
+MONTH_CHOICES = [(i, timezone.datetime(2000, i, 1).strftime('%B')) for i in range(1, 13)]
 
-# ==========================================================
-#  PERIOD MODEL
-# ==========================================================
 class PayrollPeriod(models.Model):
-    MONTH_CHOICES = [(i, timezone.datetime(2000, i, 1).strftime('%B')) for i in range(1, 13)]
-
     month = models.IntegerField(choices=MONTH_CHOICES)
     year = models.IntegerField()
     is_locked = models.BooleanField(default=False)
-    date_created = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('month', 'year')
-        ordering = ['-year', '-month']
+        unique_together = ("month", "year")
 
     def __str__(self):
         return f"{self.get_month_display()} {self.year}"
 
-
 # ==========================================================
-#  ALLOWANCES AND DEDUCTIONS
+# ALLOWANCES
 # ==========================================================
 class Allowance(models.Model):
     name = models.CharField(max_length=100, unique=True)
     is_taxable = models.BooleanField(default=True)
+    default_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def __str__(self):
         return self.name
 
+class EmployeeAllowance(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="employee_allowances", null=True, blank=True)
+    allowance = models.ForeignKey(Allowance, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    period_month = models.IntegerField(choices=MONTH_CHOICES, default=timezone.now().month)
+    period_year = models.IntegerField(default=timezone.now().year)
 
+    @property
+    def is_taxable(self):
+        return self.allowance.is_taxable
+
+# ==========================================================
+# DEDUCTIONS
+# ==========================================================
 class Deduction(models.Model):
     name = models.CharField(max_length=100, unique=True)
     is_statutory = models.BooleanField(default=False)
+    apply_rate = models.BooleanField(default=False)
+    rate = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    default_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    def clean(self):
+        if self.apply_rate and self.rate is None:
+            raise ValidationError("Rate is required when apply_rate=True")
+
+    def calculate_amount(self, gross_pay):
+        if self.apply_rate:
+            return (gross_pay * self.rate) / 100
+        return self.default_amount or 0
 
     def __str__(self):
         return self.name
 
+class EmployeeStatutoryDeduction(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="statutory_deductions", null=True, blank=True)
+    deduction = models.ForeignKey(Deduction, on_delete=models.CASCADE, null=True, blank=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    period_month = models.IntegerField(choices=MONTH_CHOICES, default=timezone.now().month)
+    period_year = models.IntegerField(default=timezone.now().year)
+
+class EmployeeNonStatutoryDeduction(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="non_statutory_deductions", null=True, blank=True)
+    deduction = models.ForeignKey(Deduction, on_delete=models.CASCADE,  null=True, blank=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    period_month = models.IntegerField(choices=MONTH_CHOICES, default=timezone.now().month)
+    period_year = models.IntegerField(default=timezone.now().year)
 
 # ==========================================================
-#  OVERTIME MODEL
+# INCENTIVES
+# ==========================================================
+class Incentive(models.Model):
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="incentives")
+    name = models.CharField(max_length=100)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    is_taxable = models.BooleanField(default=True)
+    period_month = models.IntegerField(choices=MONTH_CHOICES)
+    period_year = models.IntegerField()
+
+# ==========================================================
+# OVERTIME
 # ==========================================================
 class OvertimeRecord(models.Model):
-    """Tracks overtime worked per employee per period."""
     STATUS_CHOICES = [
         ("draft", "Draft"),
         ("pending_approval", "Pending Approval"),
@@ -97,60 +117,24 @@ class OvertimeRecord(models.Model):
         ("rejected", "Rejected"),
     ]
 
-    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='overtimes')
-    period = models.ForeignKey(PayrollPeriod, on_delete=models.CASCADE, related_name='overtimes')
-    hours_worked = models.DecimalField(max_digits=6, decimal_places=2, default=0)
-    hourly_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name="overtime_records", null=True, blank=True)
+    period_month = models.IntegerField(choices=MONTH_CHOICES,default=timezone.now().month)
+    period_year = models.IntegerField(default=timezone.now().year)
+    standard_hours = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    night_hours = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    weekend_hours = models.DecimalField(max_digits=6, decimal_places=2, default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
-    date_created = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('employee', 'period')
-
-    def __str__(self):
-        return f"{self.employee} - {self.hours_worked} hrs ({self.period})"
 
     @property
     def total_amount(self):
-        return float(self.hours_worked) * float(self.hourly_rate)
-
-    # ==============================================
-    # Approval logic for overtime
-    # ==============================================
-    def submit_for_approval(self, creator):
-        """Submit the overtime record for approval using the shared workflow."""
-        approval_type = ApprovalType.objects.get(name="Overtime")
-
-        # Prevent duplicate submissions
-        existing = ApprovalRecord.objects.filter(
-            approval_type=approval_type,
-            object_id=self.id,
-            content_type=ContentType.objects.get_for_model(self)
+        return (
+            self.standard_hours * self.employee.overtime_rate +
+            self.night_hours * self.employee.night_overtime_rate +
+            self.weekend_hours * self.employee.weekend_overtime_rate
         )
-        if existing.exists():
-            return  # Already submitted
-
-        ApprovalRecord.initialize_approvals(
-            approval_type=approval_type,
-            creator=creator,
-            instance=self
-        )
-        self.status = "pending_approval"
-        self.save(update_fields=["status"])
-
-    def can_be_viewed(self, user):
-        """Allow access if approved or the user is an approver."""
-        if self.status == "approved":
-            return True
-        return ApprovalRecord.objects.filter(
-            approver__user=user,
-            object_id=self.id,
-            content_type=ContentType.objects.get_for_model(self)
-        ).exists()
-
 
 # ==========================================================
-#  PAYROLL MAIN MODEL
+# EMPLOYEE PAYROLL
 # ==========================================================
 class EmployeePayroll(models.Model):
     STATUS_CHOICES = [
@@ -161,126 +145,156 @@ class EmployeePayroll(models.Model):
     ]
 
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
-    period = models.ForeignKey(PayrollPeriod, on_delete=models.CASCADE, related_name='payrolls')
-    basic_salary = models.DecimalField(max_digits=10, decimal_places=2)
-    total_allowances = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    total_deductions = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    overtime_pay = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    period = models.ForeignKey(PayrollPeriod, on_delete=models.CASCADE)
 
     gross_pay = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     paye = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    shif = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    nssf = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    housing_levy = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_deductions = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     net_pay = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
     processed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('employee', 'period')
-        ordering = ['employee__full_name']
+        unique_together = ("employee", "period")
 
-    def __str__(self):
-        return f"{self.employee} - {self.period}"
-
-    # ======================================================
-    #  CALCULATIONS
-    # ======================================================
     def calculate_totals(self):
+        if self.status != "draft":
+            raise ValidationError("Only draft payrolls can be recalculated.")
+
         settings = PayrollSetting.get_current()
-        self.overtime_pay = self.get_overtime_total()
-        self.gross_pay = self.basic_salary + self.total_allowances + self.overtime_pay
 
-        self.paye = self.calculate_paye(settings)
-        self.shif = self.gross_pay * (settings.shif_rate / 100)
-        self.nssf = min(self.gross_pay * (settings.nssf_rate / 100), settings.nssf_cap)
-        self.housing_levy = self.gross_pay * (settings.housing_levy_rate / 100)
-
-        total_deductions = (
-            self.paye + self.shif + self.nssf + self.housing_levy + self.total_deductions
+        # ------------------------------------------------------
+        # Overtime
+        # ------------------------------------------------------
+        overtime_pay = sum(
+            o.total_amount
+            for o in self.employee.overtime_records.filter(
+                period_month=self.period.month,
+                period_year=self.period.year,
+                status="approved"
+            )
         )
 
-        self.net_pay = self.gross_pay - total_deductions
-        return self
+        # ------------------------------------------------------
+        # Allowances
+        # ------------------------------------------------------
+        total_allowances = sum(
+            a.amount
+            for a in self.employee.employee_allowances.filter(
+                period_month=self.period.month,
+                period_year=self.period.year
+            )
+        )
+        taxable_allowances = sum(
+            a.amount
+            for a in self.employee.employee_allowances.filter(
+                period_month=self.period.month,
+                period_year=self.period.year,
+                allowance__is_taxable=True
+            )
+        )
 
-    def calculate_paye(self, settings):
-        """Progressive PAYE based on configured bands."""
-        pay = self.gross_pay
-        tax = 0
+        # ------------------------------------------------------
+        # Incentives
+        # ------------------------------------------------------
+        total_incentives = sum(
+            i.amount
+            for i in self.employee.incentives.filter(
+                period_month=self.period.month,
+                period_year=self.period.year
+            )
+        )
+        taxable_incentives = sum(
+            i.amount
+            for i in self.employee.incentives.filter(
+                period_month=self.period.month,
+                period_year=self.period.year,
+                is_taxable=True
+            )
+        )
 
+        # ------------------------------------------------------
+        # Gross pay (before deductions)
+        # ------------------------------------------------------
+        self.gross_pay = self.employee.basic_salary + total_allowances + total_incentives + overtime_pay
+
+        # ------------------------------------------------------
+        # Statutory deductions (excluding PAYE)
+        # ------------------------------------------------------
+        statutory_total = sum(
+            d.calculate_amount(self.gross_pay)
+            for d in self.employee.statutory_deductions.all()
+        )
+
+        # ------------------------------------------------------
+        # Taxable pay for PAYE = (basic + taxable allowances + taxable incentives + overtime) - statutory deductions
+        # ------------------------------------------------------
+        taxable_pay = (
+            self.employee.basic_salary
+            + taxable_allowances
+            + taxable_incentives
+            + overtime_pay
+            - statutory_total
+        )
+
+        # ------------------------------------------------------
+        # PAYE
+        # ------------------------------------------------------
+        self.paye = self._calculate_paye(settings, taxable_pay)
+        statutory_total += self.paye  # include PAYE in statutory total
+
+        # ------------------------------------------------------
+        # Non-statutory deductions
+        # ------------------------------------------------------
+        non_statutory_total = sum(
+            d.amount
+            for d in self.employee.non_statutory_deductions.filter(
+                period_month=self.period.month,
+                period_year=self.period.year
+            )
+        )
+
+        # ------------------------------------------------------
+        # Totals
+        # ------------------------------------------------------
+        self.total_deductions = statutory_total + non_statutory_total
+        self.net_pay = self.gross_pay - self.total_deductions
+
+
+    def _calculate_paye(self, settings, taxable_pay):
+        pay = taxable_pay
         if pay <= settings.paye_band_1_limit:
-            tax = pay * (settings.paye_band_1_rate / 100)
+            return pay * settings.paye_band_1_rate / 100
         elif pay <= settings.paye_band_2_limit:
-            tax = (
-                settings.paye_band_1_limit * (settings.paye_band_1_rate / 100)
-                + (pay - settings.paye_band_1_limit) * (settings.paye_band_2_rate / 100)
+            return (
+                settings.paye_band_1_limit * settings.paye_band_1_rate / 100 +
+                (pay - settings.paye_band_1_limit) * settings.paye_band_2_rate / 100
             )
+        return (
+            settings.paye_band_1_limit * settings.paye_band_1_rate / 100 +
+            (settings.paye_band_2_limit - settings.paye_band_1_limit) * settings.paye_band_2_rate / 100 +
+            (pay - settings.paye_band_2_limit) * settings.paye_band_3_rate / 100
+        )
+
+# ==========================================================
+# BULK PAYROLL GENERATION
+# ==========================================================
+def bulk_generate_payroll(period: PayrollPeriod):
+    created = 0
+    skipped = 0
+    employees = Employee.objects.filter(job_status="active")
+
+    for emp in employees:
+        payroll, is_created = EmployeePayroll.objects.get_or_create(
+            employee=emp,
+            period=period
+        )
+        if is_created:
+            payroll.calculate_totals()
+            payroll.save()
+            created += 1
         else:
-            tax = (
-                settings.paye_band_1_limit * (settings.paye_band_1_rate / 100)
-                + (settings.paye_band_2_limit - settings.paye_band_1_limit)
-                * (settings.paye_band_2_rate / 100)
-                + (pay - settings.paye_band_2_limit) * (settings.paye_band_3_rate / 100)
-            )
+            skipped += 1
 
-        return round(tax, 2)
-
-    def get_overtime_total(self):
-        """Sum of all approved overtime records for this employee & period."""
-        overtimes = OvertimeRecord.objects.filter(employee=self.employee, period=self.period, status="approved")
-        return sum(o.total_amount for o in overtimes)
-
-    # ==============================================
-    # Approval workflow integration
-    # ==============================================
-    def submit_for_approval(self, creator):
-        """Submit the payroll record for approval using the shared workflow."""
-        approval_type = ApprovalType.objects.get(name="Payroll")
-
-        existing = ApprovalRecord.objects.filter(
-            approval_type=approval_type,
-            object_id=self.id,
-            content_type=ContentType.objects.get_for_model(self)
-        )
-        if existing.exists():
-            return  # Already under approval
-
-        ApprovalRecord.initialize_approvals(
-            approval_type=approval_type,
-            creator=creator,
-            instance=self
-        )
-        self.status = "pending_approval"
-        self.save(update_fields=["status"])
-
-    def can_be_viewed(self, user):
-        """Restrict access to approved payrolls or approvers."""
-        if self.status == "approved":
-            return True
-        return ApprovalRecord.objects.filter(
-            approver__user=user,
-            object_id=self.id,
-            content_type=ContentType.objects.get_for_model(self)
-        ).exists()
-
-
-# ==========================================================
-#  ALLOWANCE & DEDUCTION LINE ITEMS
-# ==========================================================
-class EmployeeAllowance(models.Model):
-    employee_payroll = models.ForeignKey(EmployeePayroll, on_delete=models.CASCADE, related_name='allowances')
-    allowance = models.ForeignKey(Allowance, on_delete=models.CASCADE)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-
-    def __str__(self):
-        return f"{self.allowance.name}: {self.amount}"
-
-
-class EmployeeDeduction(models.Model):
-    employee_payroll = models.ForeignKey(EmployeePayroll, on_delete=models.CASCADE, related_name='deductions')
-    deduction = models.ForeignKey(Deduction, on_delete=models.CASCADE)
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-
-    def __str__(self):
-        return f"{self.deduction.name}: {self.amount}"
+    return {"created": created, "skipped": skipped}
